@@ -1,0 +1,45 @@
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Laravel environment and secrets
+.env
+.env.*
+!.env.example
+
+# Laravel runtime files
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/logs/*
+
+# Ignore generated files but keep required directories
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/views/.gitignore
+!/storage/logs/.gitignore
+
+# Compiled frontend assets
+/public/build/
+
+# Testing and coverage
+/phpunit.result.cache
+/coverage/
+
+# IDE and operating system
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Local tools
+/.phpunit.cache/
+/.phpactor.yml
+.phpstorm.meta.php
