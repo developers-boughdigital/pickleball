@@ -3,76 +3,101 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\PermissionRequest;
+use App\Models\ActivityLog;
+use App\Models\Permission;
 use App\Models\Role;
-use App\Support\PermissionMatrix;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
-use Spatie\Permission\Models\Permission;
 
 class PermissionController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $permissions = Permission::withCount('roles')->orderBy('id')->get();
+        $search = $request->string('search')->trim()->value();
+        $module = $request->string('module')->value();
+
+        $permissions = Permission::query()
+            ->withCount('roles')
+            ->when($search, fn ($query) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('module', 'like', "%{$search}%")))
+            ->when($module, fn ($query) => $query->where('module', $module))
+            ->orderBy('module')
+            ->orderBy('name')
+            ->get();
+
+        $modules = Permission::modules();
 
         return view('admin.permissions.index', [
-            'modules' => $permissions
-                ->filter(fn (Permission $p) => str_contains($p->name, '.'))
-                ->groupBy(fn (Permission $p) => Str::before($p->name, '.')),
-            'standardActions' => PermissionMatrix::ACTIONS,
+            'permissions' => $permissions,
+            'modules' => $modules->combine($modules)->all(),
+            'filters' => ['search' => $search, 'module' => $module],
+            'total' => Permission::count(),
         ]);
     }
 
-    /**
-     * Adds a module with the ticked standard actions and/or one custom action.
-     * Re-adding an existing permission is harmless.
-     */
-    public function store(Request $request): RedirectResponse
+    public function create(Request $request): View
     {
-        $data = $request->validate([
-            'module' => ['required', 'string', 'max:40', 'regex:/^[a-z][a-z0-9-]*$/'],
-            'actions' => ['array'],
-            'actions.*' => ['string', 'in:'.implode(',', PermissionMatrix::ACTIONS)],
-            'custom_action' => ['nullable', 'string', 'max:30', 'regex:/^[a-z][a-z0-9-]*$/'],
-        ], [
-            'module.regex' => 'Use lowercase letters, numbers and dashes, starting with a letter (e.g. club-night).',
-            'custom_action.regex' => 'Use lowercase letters, numbers and dashes, starting with a letter (e.g. export).',
-        ]);
+        return $this->form(new Permission(['module' => $request->string('module')->value() ?: null]));
+    }
 
-        $actions = collect($data['actions'] ?? [])->push($data['custom_action'] ?? null)->filter()->unique();
-
-        if ($actions->isEmpty()) {
-            return back()->withInput()->withErrors(['actions' => 'Tick at least one action or enter a custom one.']);
-        }
-
-        $created = $actions->reject(fn (string $action) => Permission::where('name', "{$data['module']}.{$action}")->exists())
-            ->each(fn (string $action) => Permission::create(['name' => "{$data['module']}.{$action}", 'guard_name' => 'web']));
+    public function store(PermissionRequest $request): RedirectResponse
+    {
+        $permission = Permission::create([...$request->validated(), 'guard_name' => 'web']);
 
         // The super admin always holds every permission.
-        Role::where('name', Role::SUPER_ADMIN)->first()?->givePermissionTo(
-            $created->map(fn (string $action) => "{$data['module']}.{$action}")->all()
-        );
+        Role::where('name', Role::SUPER_ADMIN)->first()?->givePermissionTo($permission);
 
-        $label = PermissionMatrix::label($data['module']);
+        ActivityLog::record('permission.created', "Added permission {$permission->name}", $permission, $permission->name, [
+            'module' => ['from' => null, 'to' => $permission->module],
+            'purpose' => ['from' => null, 'to' => $permission->description],
+        ]);
 
-        return redirect()->route('admin.permissions.index')->with('status', $created->isEmpty()
-            ? "{$label} already had those permissions."
-            : "Added {$created->count()} ".str('permission')->plural($created->count())." to {$label}.");
+        return redirect()->route('admin.permissions.index')->with('status', "Permission {$permission->name} created.");
+    }
+
+    public function edit(Permission $permission): View
+    {
+        return $this->form($permission);
+    }
+
+    public function update(PermissionRequest $request, Permission $permission): RedirectResponse
+    {
+        $permission->fill($request->validated());
+        $changes = ActivityLog::diff($permission, ['module', 'name', 'description']);
+        $permission->save();
+
+        if ($changes) {
+            ActivityLog::record('permission.updated', "Updated permission {$permission->name}", $permission, $permission->name, $changes);
+        }
+
+        return redirect()->route('admin.permissions.index')->with('status', "Permission {$permission->name} saved.");
     }
 
     public function destroy(Permission $permission): RedirectResponse
     {
+        $roles = $permission->roles()->count();
+        ActivityLog::record('permission.deleted', "Deleted permission {$permission->name}", $permission, $permission->name, $roles ? [
+            'roles with it' => ['from' => $permission->roles()->pluck('name')->all(), 'to' => null],
+        ] : null);
         $permission->delete();
 
-        return back()->with('status', "Permission {$permission->name} deleted.");
+        $message = "Permission {$permission->name} deleted.";
+        if ($roles > 0) {
+            $message .= " It was removed from {$roles} ".str('role')->plural($roles).'.';
+        }
+
+        return redirect()->route('admin.permissions.index')->with('status', $message);
     }
 
-    public function destroyModule(string $module): RedirectResponse
+    private function form(Permission $permission): View
     {
-        $deleted = Permission::where('name', 'like', addcslashes($module, '%_').'.%')->get()->each->delete()->count();
-
-        return redirect()->route('admin.permissions.index')->with('status', 'Deleted the '.PermissionMatrix::label($module)." module ({$deleted} ".str('permission')->plural($deleted).').');
+        return view('admin.permissions.form', [
+            'permission' => $permission,
+            'modules' => Permission::modules(),
+        ]);
     }
 }

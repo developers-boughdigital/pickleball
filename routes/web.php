@@ -24,15 +24,9 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('users', UserController::class)->name('users');
+        Route::resource('users', UserController::class)->except('show');
         Route::resource('roles', RoleController::class)->except('show');
-
-        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
-        Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
-        Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
-        Route::delete('permission-modules/{module}', [PermissionController::class, 'destroyModule'])
-            ->where('module', '[a-z][a-z0-9-]*')
-            ->name('permissions.destroy-module');
+        Route::resource('permissions', PermissionController::class)->except('show');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
     });
 

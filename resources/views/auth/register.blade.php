@@ -1,10 +1,10 @@
 <x-layout title="Register">
     <div class="mx-auto max-w-md">
-        <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <h1 class="text-2xl font-bold">Create your account</h1>
             <p class="mt-1 text-sm text-slate-500">Join {{ config('app.name') }} in a few seconds.</p>
 
-            <form method="POST" action="{{ route('register') }}" class="mt-8 space-y-5">
+            <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-5">
                 @csrf
 
                 <x-input name="name" label="Name" required autofocus autocomplete="name" />

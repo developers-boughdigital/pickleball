@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,8 @@ class RegisterController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        ActivityLog::record('auth.registered', "Registered as {$user->email}", $user, $user->name);
 
         return redirect()->route('dashboard')->with('status', 'Welcome, '.$user->name.'! Your account has been created.');
     }

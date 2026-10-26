@@ -24,7 +24,7 @@
             'defaultDriver' => $defaultDriver,
             'routes' => ['database' => route('install.database'), 'install' => route('install.store')],
         ]))"
-        class="mx-auto max-w-2xl px-4 py-10 sm:py-16"
+        class="mx-auto max-w-2xl px-4 py-8 sm:py-10"
     >
         <header class="flex items-center justify-center gap-3">
             <x-admin.brand-mark class="size-11" />
@@ -32,7 +32,7 @@
         </header>
 
         {{-- Progress --}}
-        <ol class="mt-10 flex items-center gap-2" aria-label="Installation steps">
+        <ol class="mt-8 flex items-center gap-2" aria-label="Installation steps">
             <template x-for="(label, index) in steps" :key="label">
                 <li class="flex flex-1 items-center gap-2" :aria-current="index === step ? 'step' : null">
                     <span
@@ -48,7 +48,7 @@
             </template>
         </ol>
 
-        <main class="mt-8 rounded-2xl bg-white p-6 shadow-xl sm:p-10">
+        <main class="mt-6 rounded-2xl bg-white p-6 shadow-xl sm:p-8">
             {{-- 1. Welcome --}}
             <section x-show="step === 0" data-step="0">
                 <h1 class="text-[28px] leading-tight font-bold tracking-tight">Welcome</h1>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\ActivityLog;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -34,6 +36,7 @@ class LoginRequest extends FormRequest
     {
         if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             event(new Lockout($this));
+            $this->logFailure('auth.locked_out', 'Locked out after too many sign-in attempts');
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.throttle', ['seconds' => RateLimiter::availableIn($this->throttleKey())]),
@@ -42,6 +45,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            $this->logFailure('auth.login_failed', 'Failed sign-in: wrong email or password');
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -49,6 +53,18 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+    }
+
+    /**
+     * Attribute the attempt to the account when the email exists, otherwise
+     * keep the email that was typed so repeated guesses are still visible.
+     */
+    private function logFailure(string $action, string $description): void
+    {
+        $email = Str::lower($this->string('email'));
+        $user = User::where('email', $email)->first();
+
+        ActivityLog::record($action, $description, $user, $email, succeeded: false, actor: $user, actorName: $email);
     }
 
     private function throttleKey(): string

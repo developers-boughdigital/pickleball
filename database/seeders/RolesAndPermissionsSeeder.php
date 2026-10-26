@@ -2,30 +2,75 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * The platform roles from the brief. Safe to run more than once: existing roles
- * keep any permission changes made in the admin, only missing ones are added.
+ * Permissions for the parts of the admin that exist today, plus two starter roles.
+ *
+ * Safe to run more than once: permissions are created or have their module and
+ * purpose refreshed; roles that already exist keep whatever was changed in the
+ * admin, only missing roles are created.
  */
 class RolesAndPermissionsSeeder extends Seeder
 {
-    public const MODULES = ['directory', 'clubs', 'sessions', 'club-night', 'members', 'payments', 'levels', 'shop'];
+    /**
+     * Module => [permission name => purpose].
+     */
+    public const PERMISSIONS = [
+        'Dashboard' => [
+            'dashboard.view' => 'View the overview dashboard',
+        ],
+        'Users' => [
+            'users.view' => 'View users',
+            'users.create' => 'Create users',
+            'users.update' => 'Edit users and their roles',
+            'users.delete' => 'Delete users',
+        ],
+        'Roles' => [
+            'roles.view' => 'View roles',
+            'roles.create' => 'Create roles',
+            'roles.update' => 'Edit roles and their permissions',
+            'roles.delete' => 'Delete roles',
+        ],
+        'Permissions' => [
+            'permissions.view' => 'View permissions',
+            'permissions.create' => 'Add permissions',
+            'permissions.update' => 'Edit permissions',
+            'permissions.delete' => 'Delete permissions',
+        ],
+        'Activity Log' => [
+            'activity.view' => 'View the audit log',
+        ],
+        'System Settings' => [
+            'settings.view' => 'View system settings',
+            'settings.update' => 'Change system settings',
+        ],
+    ];
 
     public function run(): void
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        foreach (self::MODULES as $module) {
-            foreach (['view', 'create', 'edit', 'approve'] as $action) {
-                Permission::findOrCreate("{$module}.{$action}", 'web');
+        foreach (self::PERMISSIONS as $module => $permissions) {
+            foreach ($permissions as $name => $description) {
+                Permission::updateOrCreate(
+                    ['name' => $name, 'guard_name' => 'web'],
+                    ['module' => $module, 'description' => $description],
+                );
             }
         }
 
-        foreach ($this->roles() as $name => [$description, $grants]) {
+        $all = collect(self::PERMISSIONS)->flatMap(fn (array $permissions) => array_keys($permissions));
+
+        $roles = [
+            Role::SUPER_ADMIN => ['Full access to everything, including roles and permissions', $all],
+            'Viewer' => ['Can look around the admin but not change anything', $all->filter(fn (string $name) => str_ends_with($name, '.view'))],
+        ];
+
+        foreach ($roles as $name => [$description, $permissions]) {
             $role = Role::firstOrNew(['name' => $name, 'guard_name' => 'web']);
 
             if ($role->exists) {
@@ -33,54 +78,7 @@ class RolesAndPermissionsSeeder extends Seeder
             }
 
             $role->fill(['description' => $description])->save();
-            $role->syncPermissions($this->expand($grants));
+            $role->syncPermissions($permissions->values()->all());
         }
-    }
-
-    /**
-     * @return array<string, array{string, array<string, string>}>
-     */
-    private function roles(): array
-    {
-        $all = array_fill_keys(self::MODULES, 'view,create,edit,approve');
-
-        return [
-            Role::SUPER_ADMIN => ['Approve claims, moderate content, manage listings, refunds and support', $all],
-            'Club admin' => ['Club profile, sessions, events, members and payments; runs Club Night', [
-                'directory' => 'view', 'clubs' => 'view,create,edit', 'sessions' => 'view,create,edit,approve',
-                'club-night' => 'view,create,edit', 'members' => 'view,create,edit,approve',
-                'payments' => 'view,edit', 'levels' => 'view,edit,approve', 'shop' => 'view',
-            ]],
-            'Club session host' => ['Check-in, court rotation and scores on the night. No money or member data', [
-                'directory' => 'view', 'clubs' => 'view', 'sessions' => 'view', 'club-night' => 'view,create,edit', 'shop' => 'view',
-            ]],
-            'Coach' => ['Coach profile, lessons and clinics, enquiries, assess player levels', [
-                'directory' => 'view', 'clubs' => 'view', 'sessions' => 'view,create,edit', 'levels' => 'view,edit,approve', 'shop' => 'view',
-            ]],
-            'Venue manager' => ['Venue listing, courts, opening hours and prices', [
-                'directory' => 'view,edit', 'clubs' => 'view', 'sessions' => 'view', 'shop' => 'view',
-            ]],
-            'Seller' => ['Product listings in the shop (Phase 2)', [
-                'directory' => 'view', 'shop' => 'view,create,edit',
-            ]],
-            'Player' => ['Profile and level, join sessions, pay, follow clubs', [
-                'directory' => 'view', 'clubs' => 'view', 'sessions' => 'view,create', 'club-night' => 'view,edit',
-                'payments' => 'view', 'levels' => 'view,create', 'shop' => 'view',
-            ]],
-        ];
-    }
-
-    /**
-     * ['clubs' => 'view,edit'] => ['clubs.view', 'clubs.edit']
-     *
-     * @param  array<string, string>  $grants
-     * @return list<string>
-     */
-    private function expand(array $grants): array
-    {
-        return collect($grants)
-            ->flatMap(fn (string $actions, string $module) => array_map(fn ($action) => "{$module}.{$action}", explode(',', $actions)))
-            ->values()
-            ->all();
     }
 }

@@ -31,12 +31,12 @@
 
     <x-admin.sidebar />
 
-    <div class="transition-[padding] duration-300 ease-in-out md:pl-24 lg:pl-64 lg:collapsed:pl-20">
+    <div class="transition-[padding] duration-300 ease-in-out md:pl-24 lg:pl-60 lg:collapsed:pl-20">
         <x-admin.topbar :breadcrumb="$breadcrumb" />
 
-        <main id="content" data-swap class="px-4 py-6 sm:px-6 sm:py-8 lg:px-12 lg:py-10">
+        <main id="content" data-swap class="px-4 py-4 sm:px-5 lg:px-6 lg:py-5">
             @if (session('status'))
-                <div class="mb-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
+                <div class="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-700">
                     {{ session('status') }}
                 </div>
             @endif

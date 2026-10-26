@@ -1,10 +1,10 @@
 <x-layout title="Log in">
     <div class="mx-auto max-w-md">
-        <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <h1 class="text-2xl font-bold">Welcome back</h1>
             <p class="mt-1 text-sm text-slate-500">Log in to your {{ config('app.name') }} account.</p>
 
-            <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-5">
+            <form method="POST" action="{{ route('login') }}" class="mt-6 space-y-5">
                 @csrf
 
                 <x-input name="email" label="Email" type="email" required autofocus autocomplete="username" />

@@ -2,7 +2,7 @@
 @props(['name', 'options' => [], 'selected' => null, 'placeholder' => null])
 
 <div {{ $attributes->class('relative') }}>
-    <select name="{{ $name }}" @change="$el.form.requestSubmit()" class="field w-full cursor-pointer appearance-none pr-10">
+    <select name="{{ $name }}" @change="$el.form.requestSubmit()" class="field w-full cursor-pointer appearance-none pr-8">
         @if ($placeholder)
             <option value="">{{ $placeholder }}</option>
         @endif
@@ -10,5 +10,5 @@
             <option value="{{ $value }}" @selected((string) $selected === (string) $value)>{{ $label }}</option>
         @endforeach
     </select>
-    <x-icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-slate-500" />
+    <x-icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-slate-500" />
 </div>

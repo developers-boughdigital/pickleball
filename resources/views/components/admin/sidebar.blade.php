@@ -3,8 +3,8 @@
     // route patterns that mark it active, and optional children.
     $nav = [
         ['label' => 'Overview', 'short' => 'Overview', 'icon' => 'layout-grid', 'rail' => 'layout-grid', 'route' => 'dashboard', 'active' => ['dashboard']],
-        ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users', 'active' => ['admin.users', 'admin.roles.*', 'admin.permissions.*', 'admin.activity'], 'children' => [
-            ['label' => 'Users', 'route' => 'admin.users'],
+        ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users.index', 'active' => ['admin.users.*', 'admin.roles.*', 'admin.permissions.*', 'admin.activity'], 'children' => [
+            ['label' => 'Users', 'route' => 'admin.users.index', 'active' => ['admin.users.*']],
             ['label' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'active' => ['admin.roles.*', 'admin.permissions.*']],
             ['label' => 'Activity Log', 'route' => 'admin.activity'],
         ]],
@@ -30,12 +30,12 @@
 --}}
 <aside
     :class="{ '-translate-x-full': ! sidebarOpen }"
-    class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col overflow-hidden bg-ink-950 text-slate-200 transition-[translate,width] duration-300 ease-in-out lg:translate-x-0 lg:collapsed:w-20"
+    class="fixed inset-y-0 left-0 z-50 flex w-60 -translate-x-full flex-col overflow-hidden bg-ink-950 text-slate-200 transition-[translate,width] duration-300 ease-in-out lg:translate-x-0 lg:collapsed:w-20"
 >
-    <div class="flex h-20 shrink-0 items-center justify-between border-b border-white/15 px-5">
+    <div class="flex h-14 shrink-0 items-center justify-between border-b border-white/15 px-5">
         <a href="{{ route('dashboard') }}" class="group flex items-center gap-3" title="{{ config('app.name') }}">
-            <x-admin.brand-mark class="size-10 transition group-hover:rotate-12" />
-            <span class="text-[22px] leading-none font-extrabold tracking-tight whitespace-nowrap text-white transition-opacity duration-200 lg:collapsed:opacity-0">
+            <x-admin.brand-mark class="size-8 transition group-hover:rotate-12" />
+            <span class="text-lg leading-none font-extrabold tracking-tight whitespace-nowrap text-white transition-opacity duration-200 lg:collapsed:opacity-0">
                 Pickle<span class="bg-linear-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">Ball</span>
             </span>
         </a>
@@ -44,11 +44,11 @@
         </button>
     </div>
 
-    <nav id="sidebar-nav" data-swap class="flex-1 space-y-1.5 overflow-x-hidden overflow-y-auto px-3.5 py-6">
+    <nav id="sidebar-nav" data-swap class="flex-1 space-y-1 overflow-x-hidden overflow-y-auto px-3.5 py-3">
         @foreach ($nav as $item)
             @php($active = $isActive($item))
             <a href="{{ $href($item) }}" title="{{ $item['label'] }}" @class([
-                'flex items-center gap-3.5 rounded-lg px-4 py-3 text-[15px] transition',
+                'flex items-center gap-3 rounded-lg px-4 py-2 text-sm transition',
                 'nav-active' => $active,
                 'text-slate-200 hover:bg-white/5' => ! $active,
             ])>
@@ -64,7 +64,7 @@
                             @foreach ($item['children'] as $child)
                                 @php($childActive = request()->routeIs(...($child['active'] ?? [$child['route']])))
                                 <a href="{{ route($child['route']) }}" @class([
-                                    'block rounded-lg px-3 py-2.5 text-[15px] whitespace-nowrap transition',
+                                    'block rounded-lg px-3 py-1.5 text-sm whitespace-nowrap transition',
                                     'nav-active' => $childActive,
                                     'text-slate-300 hover:bg-white/5 hover:text-white' => ! $childActive,
                                 ])>{{ $child['label'] }}</a>
@@ -79,16 +79,16 @@
 
 {{-- Compact rail: tablet only --}}
 <aside class="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col bg-ink-950 text-slate-200 md:flex lg:hidden">
-    <a href="{{ route('dashboard') }}" class="flex h-20 shrink-0 flex-col items-center justify-center gap-1.5 border-b border-white/15">
-        <x-admin.brand-mark class="size-9" />
+    <a href="{{ route('dashboard') }}" class="flex h-14 shrink-0 flex-col items-center justify-center gap-1 border-b border-white/15">
+        <x-admin.brand-mark class="size-7" />
         <span class="text-xs leading-none font-extrabold tracking-tight text-white">Pickle<span class="text-brand-400">Ball</span></span>
     </a>
 
-    <nav id="rail-nav" data-swap class="flex-1 space-y-1 overflow-y-auto px-2 py-4">
+    <nav id="rail-nav" data-swap class="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         @foreach ($nav as $item)
             @php($active = $isActive($item))
             <a href="{{ $href($item) }}" title="{{ $item['label'] }}" @class([
-                'flex flex-col items-center gap-1.5 rounded-xl px-1 py-2.5 text-center text-[11px] leading-tight font-medium transition',
+                'flex flex-col items-center gap-1.5 rounded-xl px-1 py-2 text-center text-[11px] leading-tight font-medium transition',
                 'nav-active' => $active,
                 'text-slate-200 hover:bg-white/5' => ! $active,
             ])>
