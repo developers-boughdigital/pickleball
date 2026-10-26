@@ -44,13 +44,13 @@
                             <td class="px-4 py-2.5 tabular-nums">{{ number_format($role->users_count) }}</td>
                             <td class="px-4 py-2.5 text-slate-500">{{ $role->updated_at?->diffForHumans() }}</td>
                             <td class="px-4 py-2.5">
-                                <div class="flex justify-end gap-1">
-                                    <a href="{{ route('admin.roles.edit', $role) }}" class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $role->name }}">
+                                <div class="flex justify-end gap-1.5">
+                                    <a href="{{ route('admin.roles.edit', $role) }}" class="icon-btn-edit" title="Edit {{ $role->name }}">
                                         <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $role->name }}</span>
                                     </a>
                                     @if ($role->isProtected())
-                                        <span class="grid size-8 place-items-center text-slate-400" title="This role can’t be deleted">
+                                        <span class="icon-btn-locked" title="This role can’t be deleted">
                                             <x-icon name="lock" class="size-4" />
                                             <span class="sr-only">{{ $role->name }} can’t be deleted</span>
                                         </span>
@@ -62,7 +62,7 @@
                                         >
                                             @csrf
                                             @method('DELETE')
-                                            <button class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $role->name }}">
+                                            <button class="icon-btn-delete" title="Delete {{ $role->name }}">
                                                 <x-icon name="trash" class="size-4" />
                                                 <span class="sr-only">Delete {{ $role->name }}</span>
                                             </button>

@@ -1,82 +1,65 @@
 @php($editing = $role->exists)
 
 <x-admin.layout :title="$editing ? 'Edit '.$role->name : 'Create role'" :breadcrumb="['Roles & Permissions', $editing ? $role->name : 'Create role']">
-    <a href="{{ route('admin.roles.index') }}" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-ink-950">
-        <x-icon name="chevron-left" class="size-4" /> Back to roles
+    <a href="{{ route('admin.roles.index') }}" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-ink-950">
+        <x-icon name="chevron-left" class="size-4" /> Roles
     </a>
 
-    <div class="mt-3">
-        <x-admin.page-header
-            :title="$editing ? 'Edit role' : 'Create role'"
-            :subtitle="$editing ? 'Change the name and what this role can do.' : 'Name the role, then tick what it can do.'"
-        />
-    </div>
-
-    <form method="POST" action="{{ $editing ? route('admin.roles.update', $role) : route('admin.roles.store') }}" class="mt-3 space-y-4">
+    <form
+        method="POST"
+        action="{{ $editing ? route('admin.roles.update', $role) : route('admin.roles.store') }}"
+        x-data="{ dirty: false, name: @js(old('name', $role->name)) }"
+        @input="dirty = true"
+        @change="dirty = true"
+        class="mt-3 space-y-3"
+    >
         @csrf
         @if ($editing)
             @method('PUT')
         @endif
 
-        <section class="card space-y-4 p-4 sm:p-5">
-            <h2 class="text-base font-semibold">Details</h2>
+        <x-admin.form-heading :icon="$role->isProtected() ? 'shield-check' : 'key'">
+            <h1 class="truncate text-xl font-bold tracking-tight" x-text="name || 'New role'">{{ $role->name ?: 'New role' }}</h1>
+        </x-admin.form-heading>
 
-            <div class="grid gap-3 lg:grid-cols-2">
-                <div>
-                    <label for="name" class="block text-sm font-medium">Name</label>
-                    <input
-                        id="name"
-                        name="name"
-                        value="{{ old('name', $role->name) }}"
-                        required
-                        maxlength="60"
-                        @readonly($role->isProtected())
-                        @class(['field mt-1 w-full', 'bg-slate-50 text-slate-500' => $role->isProtected(), 'border-red-500' => $errors->has('name')])
-                    >
-                    @if ($role->isProtected())
-                        <p class="mt-1.5 text-sm text-slate-500">This role can’t be renamed.</p>
-                    @endif
-                    @error('name') <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label for="description" class="block text-sm font-medium">Description <span class="font-normal text-slate-500">(optional)</span></label>
-                    <input
-                        id="description"
-                        name="description"
-                        value="{{ old('description', $role->description) }}"
-                        maxlength="255"
-                        @class(['field mt-1 w-full', 'border-red-500' => $errors->has('description')])
-                    >
-                    @error('description') <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-            </div>
-        </section>
-
-        <section class="card p-4 sm:p-5">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-base font-semibold">Permissions</h2>
-                    <p class="mt-1 text-sm text-slate-500">
-                        @if ($role->isProtected())
-                            {{ $role->name }} always has every permission, including ones added later.
-                        @else
-                            Tick what this role can do, or use “Select all” for a whole module.
-                        @endif
-                    </p>
-                </div>
-                <a href="{{ route('admin.permissions.index') }}" class="text-sm font-medium text-brand-600 hover:underline">Manage permissions</a>
-            </div>
-
-            @error('permissions') <p class="mt-3 text-sm text-red-600">{{ $message }}</p> @enderror
-            @error('permissions.*') <p class="mt-3 text-sm text-red-600">{{ $message }}</p> @enderror
-
-            @include('admin.roles.partials.permission-picker', ['disabled' => $role->isProtected()])
-        </section>
-
-        <div class="flex flex-wrap justify-end gap-3">
-            <a href="{{ route('admin.roles.index') }}" class="btn-outline">Cancel</a>
-            <button class="btn-gold">{{ $editing ? 'Save role' : 'Create role' }}</button>
+        <div class="card grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+            <x-admin.input
+                name="name"
+                label="Role name"
+                icon="shield-check"
+                :value="old('name', $role->name)"
+                x-model="name"
+                required
+                maxlength="60"
+                placeholder="e.g. Support"
+                :readonly="$role->isProtected()"
+                :hint="$role->isProtected() ? 'This role can’t be renamed.' : null"
+                :class="$role->isProtected() ? 'bg-slate-50 text-slate-500' : ''"
+            />
+            <x-admin.input
+                name="description"
+                label="Description"
+                icon="align-left"
+                :value="old('description', $role->description)"
+                optional
+                maxlength="255"
+                placeholder="e.g. Helps people with their accounts"
+            />
         </div>
+
+        <div class="card p-4 sm:p-5">
+            <p class="mb-2 text-sm font-medium">Permissions</p>
+            @error('permissions.*') <p class="mb-2 text-sm text-red-600">{{ $message }}</p> @enderror
+
+            @include('admin.roles.partials.permission-picker', ['locked' => $role->isProtected()])
+        </div>
+
+        <x-admin.form-actions>
+            <a href="{{ route('admin.roles.index') }}" class="btn-outline">Cancel</a>
+            <button class="btn-gold">
+                <x-icon name="check" class="size-4" />
+                {{ $editing ? 'Save changes' : 'Create role' }}
+            </button>
+        </x-admin.form-actions>
     </form>
 </x-admin.layout>

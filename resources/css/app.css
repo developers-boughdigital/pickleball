@@ -61,6 +61,25 @@
         @apply bg-linear-to-r from-brand-500 to-brand-300 text-ink-950 shadow-[0_6px_18px_-8px_rgb(238_176_8/0.8)];
     }
 
+    /* Row actions in tables */
+    .icon-btn-edit,
+    .icon-btn-delete,
+    .icon-btn-locked {
+        @apply grid size-8 place-items-center transition;
+    }
+
+    .icon-btn-edit {
+        @apply text-sky-600 hover:text-sky-800;
+    }
+
+    .icon-btn-delete {
+        @apply text-red-600 hover:text-red-800;
+    }
+
+    .icon-btn-locked {
+        @apply cursor-not-allowed text-slate-300;
+    }
+
     .badge-gold,
     .badge-muted,
     .badge-danger {

@@ -45,8 +45,8 @@
                             <td class="px-4 py-2.5 text-slate-600">{{ $permission->description ?: '—' }}</td>
                             <td class="px-4 py-2.5 tabular-nums">{{ $permission->roles_count }}</td>
                             <td class="px-4 py-2.5">
-                                <div class="flex justify-end gap-1">
-                                    <a href="{{ route('admin.permissions.edit', $permission) }}" class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $permission->name }}">
+                                <div class="flex justify-end gap-1.5">
+                                    <a href="{{ route('admin.permissions.edit', $permission) }}" class="icon-btn-edit" title="Edit {{ $permission->name }}">
                                         <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $permission->name }}</span>
                                     </a>
@@ -57,7 +57,7 @@
                                     >
                                         @csrf
                                         @method('DELETE')
-                                        <button class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $permission->name }}">
+                                        <button class="icon-btn-delete" title="Delete {{ $permission->name }}">
                                             <x-icon name="trash" class="size-4" />
                                             <span class="sr-only">Delete {{ $permission->name }}</span>
                                         </button>

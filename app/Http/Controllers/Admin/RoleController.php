@@ -7,9 +7,9 @@ use App\Http\Requests\Admin\RoleRequest;
 use App\Models\ActivityLog;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class RoleController extends Controller
@@ -31,7 +31,7 @@ class RoleController extends Controller
             'search' => $search,
             'stats' => [
                 'roles' => Role::count(),
-                'assignedUsers' => DB::table(config('permission.table_names.model_has_roles'))->distinct()->count('model_id'),
+                'assignedUsers' => User::has('roles')->count(),
                 'permissions' => Permission::count(),
                 'modules' => Permission::modules()->count(),
             ],

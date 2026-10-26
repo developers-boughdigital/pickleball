@@ -67,7 +67,7 @@ class RolePermissionTest extends TestCase
     {
         $this->get('/admin/roles/create')
             ->assertOk()
-            ->assertSeeInOrder(['Activity Log', 'activity.view', 'View the audit log'])
+            ->assertSeeInOrder(['Activity Log', 'View the audit log', 'activity.view'])
             ->assertSee('Select all');
     }
 

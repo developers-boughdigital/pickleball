@@ -2,10 +2,14 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import { start as startRouter, visit } from './router';
 import installer from './installer';
+import { permissionForm, permissionPicker, userForm } from './forms';
 
 Alpine.store('nav', { loading: false });
 Alpine.magic('visit', () => visit);
 Alpine.data('installer', installer);
+Alpine.data('userForm', userForm);
+Alpine.data('permissionForm', permissionForm);
+Alpine.data('permissionPicker', permissionPicker);
 
 // Admin shell: on desktop the menu button collapses the sidebar to the icon rail
 // (remembered between visits); on smaller screens it opens the sidebar as a drawer.

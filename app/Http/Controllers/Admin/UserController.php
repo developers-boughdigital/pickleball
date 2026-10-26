@@ -9,7 +9,6 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -39,7 +38,7 @@ class UserController extends Controller
             'stats' => [
                 'total' => User::count(),
                 'newThisMonth' => User::where('created_at', '>=', now()->startOfMonth())->count(),
-                'withRole' => DB::table(config('permission.table_names.model_has_roles'))->distinct()->count('model_id'),
+                'withRole' => User::has('roles')->count(),
                 'roles' => $roles->count(),
             ],
         ]);
