@@ -46,15 +46,6 @@ class AdminPagesTest extends TestCase
         $this->get('/admin/users?search=knox')->assertOk()->assertSee('Helen Brooks')->assertDontSee('Tom Nguyen');
     }
 
-    public function test_roles_page_shows_selected_role_matrix(): void
-    {
-        $this->actingAs(User::factory()->create());
-
-        $this->get('/admin/roles')->assertOk()->assertSee('Selected role: <span class="font-medium text-ink-950">Club admin</span>', false);
-        $this->get('/admin/roles?role=session-host')->assertOk()->assertSee('Club session host')->assertSee('Club Night');
-        $this->get('/admin/roles?type=venue')->assertOk()->assertSee('Venue manager')->assertDontSee('Seller</a>', false);
-    }
-
     public function test_activity_log_selects_event_and_filters(): void
     {
         $this->actingAs(User::factory()->create());

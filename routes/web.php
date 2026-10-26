@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
@@ -24,7 +25,14 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users', UserController::class)->name('users');
-        Route::get('roles', RoleController::class)->name('roles');
+        Route::resource('roles', RoleController::class)->except('show');
+
+        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
+        Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
+        Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
+        Route::delete('permission-modules/{module}', [PermissionController::class, 'destroyModule'])
+            ->where('module', '[a-z][a-z0-9-]*')
+            ->name('permissions.destroy-module');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
     });
 

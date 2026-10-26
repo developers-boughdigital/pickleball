@@ -3,59 +3,105 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RoleRequest;
+use App\Models\Role;
+use App\Support\PermissionMatrix;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
-    public const ABILITIES = ['view', 'create', 'edit', 'approve'];
-
-    public function __invoke(Request $request): View
+    public function index(Request $request): View
     {
-        $all = self::ABILITIES;
-        $none = [];
+        $search = $request->string('search')->trim()->value();
 
-        // Sample data until roles live in the database. Roles follow the platform brief:
-        // one account type, with roles granted per club, venue or seller.
-        $roles = collect([
-            ['slug' => 'platform-admin', 'name' => 'Platform admin', 'type' => 'platform', 'description' => 'Approve claims, moderate content, manage listings, refunds and support', 'users' => 3, 'scope' => 'Whole platform', 'updated' => 'Today', 'matrix' => [
-                'Directory' => $all, 'Clubs' => $all, 'Sessions & bookings' => $all, 'Club Night' => $all, 'Members' => $all, 'Payments' => $all, 'Levels' => $all, 'Shop' => $all,
-            ]],
-            ['slug' => 'club-admin', 'name' => 'Club admin', 'type' => 'club', 'description' => 'Club profile, sessions, events, members and payments; runs Club Night', 'users' => 152, 'scope' => 'Their club', 'updated' => '2 hours ago', 'matrix' => [
-                'Directory' => ['view'], 'Clubs' => ['view', 'create', 'edit'], 'Sessions & bookings' => $all, 'Club Night' => ['view', 'create', 'edit'], 'Members' => $all, 'Payments' => ['view', 'edit'], 'Levels' => ['view', 'edit', 'approve'], 'Shop' => ['view'],
-            ]],
-            ['slug' => 'session-host', 'name' => 'Club session host', 'type' => 'club', 'description' => 'Check-in, court rotation and scores on the night. No money or member data', 'users' => 34, 'scope' => 'Their club’s sessions', 'updated' => 'Yesterday', 'matrix' => [
-                'Directory' => ['view'], 'Clubs' => ['view'], 'Sessions & bookings' => ['view'], 'Club Night' => ['view', 'create', 'edit'], 'Members' => $none, 'Payments' => $none, 'Levels' => $none, 'Shop' => ['view'],
-            ]],
-            ['slug' => 'coach', 'name' => 'Coach', 'type' => 'platform', 'description' => 'Coach profile, lessons and clinics, enquiries, assess player levels', 'users' => 42, 'scope' => 'Own profile and students', 'updated' => '3 days ago', 'matrix' => [
-                'Directory' => ['view'], 'Clubs' => ['view'], 'Sessions & bookings' => ['view', 'create', 'edit'], 'Club Night' => $none, 'Members' => $none, 'Payments' => $none, 'Levels' => ['view', 'edit', 'approve'], 'Shop' => ['view'],
-            ]],
-            ['slug' => 'venue-manager', 'name' => 'Venue manager', 'type' => 'venue', 'description' => 'Venue listing, courts, opening hours and prices', 'users' => 18, 'scope' => 'Their venue', 'updated' => '5 days ago', 'matrix' => [
-                'Directory' => ['view', 'edit'], 'Clubs' => ['view'], 'Sessions & bookings' => ['view'], 'Club Night' => $none, 'Members' => $none, 'Payments' => $none, 'Levels' => $none, 'Shop' => ['view'],
-            ]],
-            ['slug' => 'seller', 'name' => 'Seller', 'type' => 'platform', 'description' => 'Product listings in the shop (Phase 2)', 'users' => 0, 'scope' => 'Own products', 'updated' => '2 weeks ago', 'matrix' => [
-                'Directory' => ['view'], 'Clubs' => $none, 'Sessions & bookings' => $none, 'Club Night' => $none, 'Members' => $none, 'Payments' => $none, 'Levels' => $none, 'Shop' => ['view', 'create', 'edit'],
-            ]],
-            ['slug' => 'player', 'name' => 'Player', 'type' => 'platform', 'description' => 'Profile and level, join sessions, pay, follow clubs', 'users' => 4218, 'scope' => 'Own account', 'updated' => '2 weeks ago', 'matrix' => [
-                'Directory' => ['view'], 'Clubs' => ['view'], 'Sessions & bookings' => ['view', 'create'], 'Club Night' => ['view', 'edit'], 'Members' => $none, 'Payments' => ['view'], 'Levels' => ['view', 'create'], 'Shop' => ['view'],
-            ]],
-        ]);
-
-        $filters = $request->only('search', 'type');
-
-        $filtered = $roles
-            ->when($filters['search'] ?? null, fn ($c, $search) => $c->filter(
-                fn ($r) => Str::contains($r['name'].' '.$r['description'], $search, ignoreCase: true)
+        $roles = Role::query()
+            ->withCount(['users', 'permissions'])
+            ->when($search, fn ($query) => $query->where(
+                fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%")
             ))
-            ->when($filters['type'] ?? null, fn ($c, $type) => $c->where('type', $type));
+            ->orderBy('id')
+            ->get();
 
-        return view('admin.roles', [
-            'roles' => $filtered,
-            'selected' => $roles->firstWhere('slug', $request->query('role')) ?? $roles->firstWhere('slug', 'club-admin'),
-            'filters' => $filters,
-            'types' => ['platform' => 'Platform-wide', 'club' => 'Granted per club', 'venue' => 'Granted per venue'],
-            'abilities' => self::ABILITIES,
+        $selected = Role::with('permissions')->find($request->integer('role'))
+            ?? Role::with('permissions')->where('name', '!=', Role::SUPER_ADMIN)->orderBy('id')->first()
+            ?? Role::with('permissions')->first();
+
+        $grouped = PermissionMatrix::group(Permission::orderBy('id')->pluck('name'));
+
+        return view('admin.roles.index', [
+            'roles' => $roles,
+            'selected' => $selected,
+            'search' => $search,
+            'modules' => $grouped,
+            'actions' => PermissionMatrix::actions($grouped),
+            'granted' => $selected?->permissions->pluck('name')->all() ?? [],
+            'stats' => [
+                'roles' => Role::count(),
+                'assignedUsers' => DB::table(config('permission.table_names.model_has_roles'))->distinct()->count('model_id'),
+                'permissions' => $grouped->flatten()->count(),
+                'modules' => $grouped->count(),
+            ],
+        ]);
+    }
+
+    public function create(): View
+    {
+        return $this->form(new Role);
+    }
+
+    public function store(RoleRequest $request): RedirectResponse
+    {
+        $role = Role::create([...$request->safe()->only('name', 'description'), 'guard_name' => 'web']);
+        $role->syncPermissions($request->validated('permissions', []));
+
+        return redirect()->route('admin.roles.index', ['role' => $role])->with('status', "Role “{$role->name}” created.");
+    }
+
+    public function edit(Role $role): View
+    {
+        return $this->form($role);
+    }
+
+    public function update(RoleRequest $request, Role $role): RedirectResponse
+    {
+        $role->update($request->safe()->only('name', 'description'));
+
+        // The super admin always has everything, whatever was ticked.
+        $role->syncPermissions($role->isProtected() ? Permission::all() : $request->validated('permissions', []));
+
+        return redirect()->route('admin.roles.index', ['role' => $role])->with('status', "Role “{$role->name}” saved.");
+    }
+
+    public function destroy(Role $role): RedirectResponse
+    {
+        if ($role->isProtected()) {
+            return back()->with('status', "The {$role->name} role can’t be deleted.");
+        }
+
+        $users = $role->users()->count();
+        $role->delete();
+
+        $message = "Role “{$role->name}” deleted.";
+        if ($users > 0) {
+            $message .= " It was removed from {$users} ".str('user')->plural($users).'.';
+        }
+
+        return redirect()->route('admin.roles.index')->with('status', $message);
+    }
+
+    private function form(Role $role): View
+    {
+        $grouped = PermissionMatrix::group(Permission::orderBy('id')->pluck('name'));
+
+        return view('admin.roles.form', [
+            'role' => $role,
+            'modules' => $grouped,
+            'actions' => PermissionMatrix::actions($grouped),
+            'granted' => old('permissions', $role->exists ? $role->permissions->pluck('name')->all() : []),
         ]);
     }
 }

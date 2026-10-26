@@ -3,9 +3,9 @@
     // route patterns that mark it active, and optional children.
     $nav = [
         ['label' => 'Overview', 'short' => 'Overview', 'icon' => 'layout-grid', 'rail' => 'layout-grid', 'route' => 'dashboard', 'active' => ['dashboard']],
-        ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users', 'active' => ['admin.users', 'admin.roles', 'admin.activity'], 'children' => [
+        ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users', 'active' => ['admin.users', 'admin.roles.*', 'admin.permissions.*', 'admin.activity'], 'children' => [
             ['label' => 'Users', 'route' => 'admin.users'],
-            ['label' => 'Roles & Permissions', 'route' => 'admin.roles'],
+            ['label' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'active' => ['admin.roles.*', 'admin.permissions.*']],
             ['label' => 'Activity Log', 'route' => 'admin.activity'],
         ]],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings'],
@@ -62,7 +62,7 @@
                     <div class="overflow-hidden">
                         <div class="ml-8 space-y-1 border-l border-white/20 py-1 pl-3">
                             @foreach ($item['children'] as $child)
-                                @php($childActive = request()->routeIs($child['route']))
+                                @php($childActive = request()->routeIs(...($child['active'] ?? [$child['route']])))
                                 <a href="{{ route($child['route']) }}" @class([
                                     'block rounded-lg px-3 py-2.5 text-[15px] whitespace-nowrap transition',
                                     'nav-active' => $childActive,
@@ -99,7 +99,7 @@
             @isset($item['children'])
                 <div class="ml-3 space-y-0.5 border-l border-white/20 py-1 pl-1.5">
                     @foreach ($item['children'] as $child)
-                        @php($childActive = request()->routeIs($child['route']))
+                        @php($childActive = request()->routeIs(...($child['active'] ?? [$child['route']])))
                         <a href="{{ route($child['route']) }}" @class([
                             'block rounded-md px-1.5 py-1.5 text-[10px] leading-tight transition',
                             'nav-active' => $childActive,

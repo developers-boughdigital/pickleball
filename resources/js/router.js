@@ -9,29 +9,41 @@ import Alpine from 'alpinejs';
 
 let controller = null;
 
-export async function visit(url, { push = true } = {}) {
+/**
+ * @param {string|URL} url
+ * @param {{ push?: boolean, method?: string, body?: FormData, fallback?: () => void }} options
+ *   fallback runs when a non-GET request can't be shown in place (e.g. a 419
+ *   or 500 page), so the browser can submit the form for real instead.
+ */
+export async function visit(url, { push = true, method = 'GET', body = null, fallback = null } = {}) {
     controller?.abort();
     const current = (controller = new AbortController());
 
     const target = new URL(url, location.href);
-    const samePath = target.pathname === location.pathname;
+    const fullLoad = fallback ?? (() => location.assign(target));
 
     // Only show the progress bar if the request is noticeably slow.
     const showLoading = setTimeout(() => (Alpine.store('nav').loading = true), 150);
 
     try {
         const response = await fetch(target, {
+            method,
+            body,
             signal: current.signal,
             headers: { Accept: 'text/html' },
         });
         const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
 
-        // We were sent somewhere outside the admin layout (e.g. the session
-        // expired and we got the login page), so just load it normally.
+        // We ended up outside the admin layout (e.g. logged out, or the session
+        // expired and we got the login page), so load that page normally. A
+        // GET or a redirect is safe to repeat as a GET; anything else isn't.
         if (!doc.querySelector('[data-swap]')) {
-            location.assign(response.url);
+            if (method === 'GET' || response.redirected) location.assign(response.url);
+            else fullLoad();
             return;
         }
+
+        const samePath = new URL(response.url).pathname === location.pathname;
 
         const focused = rememberFocus();
 
@@ -47,7 +59,7 @@ export async function visit(url, { push = true } = {}) {
         restoreFocus(focused);
         window.dispatchEvent(new CustomEvent('spa-navigated'));
     } catch (error) {
-        if (error.name !== 'AbortError') location.assign(target);
+        if (error.name !== 'AbortError') fullLoad();
     } finally {
         clearTimeout(showLoading);
         if (controller === current) Alpine.store('nav').loading = false;
@@ -69,10 +81,24 @@ export function start() {
 
     document.addEventListener('submit', (event) => {
         const form = event.target;
-        if (form.method.toLowerCase() !== 'get') return;
+
+        // A handler already cancelled it (e.g. a "Delete?" confirm was dismissed).
+        if (event.defaultPrevented || form.hasAttribute('data-reload')) return;
 
         event.preventDefault();
-        visit(formUrl(form));
+
+        if (form.method.toLowerCase() === 'get') {
+            visit(formUrl(form));
+            return;
+        }
+
+        // POST, with Laravel's _method field carrying PUT/DELETE. Laravel answers
+        // with a redirect, which fetch follows, so we swap in the page it lands on.
+        visit(form.action, {
+            method: 'POST',
+            body: new FormData(form, event.submitter),
+            fallback: () => HTMLFormElement.prototype.submit.call(form),
+        });
     });
 
     window.addEventListener('popstate', () => visit(location.href, { push: false }));

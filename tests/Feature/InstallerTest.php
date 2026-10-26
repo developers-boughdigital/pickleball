@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\Installer;
 use Dotenv\Dotenv;
 use Illuminate\Support\Facades\File;
 use PDO;
@@ -14,6 +15,8 @@ class InstallerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->app->forgetInstance(Installer::class);
 
         // Point Laravel at an empty folder so the app looks uninstalled, without
         // touching the real .env.
@@ -42,6 +45,15 @@ class InstallerTest extends TestCase
             ->assertOk()
             ->assertSee('Welcome')
             ->assertSee('server checks passed');
+    }
+
+    public function test_installer_explains_when_front_end_is_not_built(): void
+    {
+        $this->app->usePublicPath($this->dir);
+
+        $this->get('/install')
+            ->assertStatus(503)
+            ->assertSee('npm run build');
     }
 
     public function test_installer_is_locked_once_env_exists(): void

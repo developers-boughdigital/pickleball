@@ -44,7 +44,7 @@
                             <td class="px-6 py-5 text-slate-500">{{ $user['email'] }}</td>
                             <td class="px-6 py-5">
                                 <p>{{ $user['role'] }}</p>
-                                <p class="text-sm text-slate-500">{{ $user['scope'] }}</p>
+                                <p class="text-sm text-slate-500">{{ $user['detail'] }}</p>
                             </td>
                             <td class="px-6 py-5">
                                 <span class="{{ match ($user['status']) { 'Active' => 'badge-gold', 'Suspended' => 'badge-danger', default => 'badge-muted' } }}">{{ $user['status'] }}</span>

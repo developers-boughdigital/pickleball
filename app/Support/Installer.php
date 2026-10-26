@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -122,10 +124,12 @@ class Installer
             throw new RuntimeException(trim(Artisan::output()) ?: 'Running the database migrations failed.');
         }
 
+        (new RolesAndPermissionsSeeder)->run();
+
         User::updateOrCreate(
             ['email' => $data['admin_email']],
             ['name' => $data['admin_name'], 'password' => $data['admin_password']],
-        );
+        )->assignRole(Role::SUPER_ADMIN);
 
         $this->writeEnvironmentFile($this->environmentValues($data));
     }

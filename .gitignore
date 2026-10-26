@@ -43,3 +43,5 @@ Thumbs.db
 /.phpunit.cache/
 /.phpactor.yml
 .phpstorm.meta.php
+composer.lock
+.phpunit.result.cache
