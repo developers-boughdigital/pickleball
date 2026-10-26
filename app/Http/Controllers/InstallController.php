@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\Installer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -17,9 +18,14 @@ class InstallController extends Controller
 {
     public function __construct(private Installer $installer) {}
 
-    public function show(Request $request): View
+    public function show(Request $request): Response|View
     {
         $this->ensureNotInstalled();
+
+        // A fresh clone has no public_html/build (it's git-ignored); explain rather than 500.
+        if (! $this->installer->assetsBuilt()) {
+            return response()->view('install.assets-missing', status: 503);
+        }
 
         return view('install.index', [
             'requirements' => $this->installer->requirements(),

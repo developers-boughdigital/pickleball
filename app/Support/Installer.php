@@ -59,6 +59,14 @@ class Installer
         return $checks;
     }
 
+    /**
+     * Either a production build or a running Vite dev server (the "hot" file).
+     */
+    public function assetsBuilt(): bool
+    {
+        return file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot'));
+    }
+
     public function meetsRequirements(): bool
     {
         return collect($this->requirements())->every('ok');
