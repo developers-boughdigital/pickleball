@@ -31,7 +31,7 @@
                 type="search"
                 x-ref="search"
                 placeholder="Search admin"
-                class="h-9 w-48 rounded-lg border border-white/15 bg-white/5 pr-12 pl-9 text-sm text-white placeholder:text-slate-400 focus:border-brand-400 focus:bg-white/10 focus:ring-2 focus:ring-brand-500/30 focus:outline-none lg:w-64 xl:w-72"
+                class="h-8 w-48 rounded-lg border border-white/15 bg-white/5 pr-12 pl-9 text-sm text-white placeholder:text-slate-400 focus:border-brand-400 focus:bg-white/10 focus:ring-2 focus:ring-brand-500/30 focus:outline-none lg:w-64 xl:w-72"
             >
             <kbd class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-white/15 px-1.5 py-0.5 font-sans text-xs text-slate-400">⌘K</kbd>
         </label>

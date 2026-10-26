@@ -1,10 +1,10 @@
 <x-admin.layout title="Roles & Permissions" :breadcrumb="['Admin', 'User & Security']">
     <x-admin.page-header title="Roles & Permissions" subtitle="Roles decide what people can view, create, edit and approve.">
-        <a href="{{ route('admin.permissions.index') }}" class="btn-outline h-9">
+        <a href="{{ route('admin.permissions.index') }}" class="btn-outline">
             <x-icon name="key" class="text-slate-600" />
             Manage permissions
         </a>
-        <a href="{{ route('admin.roles.create') }}" class="btn-gold h-9">
+        <a href="{{ route('admin.roles.create') }}" class="btn-gold">
             <x-icon name="plus" />
             Create role
         </a>
@@ -45,13 +45,13 @@
                             <td class="px-4 py-2.5 text-slate-500">{{ $role->updated_at?->diffForHumans() }}</td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1">
-                                    <a href="{{ route('admin.roles.edit', $role) }}" class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $role->name }}">
-                                        <x-icon name="pencil" />
+                                    <a href="{{ route('admin.roles.edit', $role) }}" class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $role->name }}">
+                                        <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $role->name }}</span>
                                     </a>
                                     @if ($role->isProtected())
-                                        <span class="grid size-9 place-items-center text-slate-400" title="This role can’t be deleted">
-                                            <x-icon name="lock" />
+                                        <span class="grid size-8 place-items-center text-slate-400" title="This role can’t be deleted">
+                                            <x-icon name="lock" class="size-4" />
                                             <span class="sr-only">{{ $role->name }} can’t be deleted</span>
                                         </span>
                                     @else
@@ -62,8 +62,8 @@
                                         >
                                             @csrf
                                             @method('DELETE')
-                                            <button class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $role->name }}">
-                                                <x-icon name="trash" />
+                                            <button class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $role->name }}">
+                                                <x-icon name="trash" class="size-4" />
                                                 <span class="sr-only">Delete {{ $role->name }}</span>
                                             </button>
                                         </form>

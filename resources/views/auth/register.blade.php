@@ -12,7 +12,7 @@
                 <x-input name="password" label="Password" type="password" required autocomplete="new-password" />
                 <x-input name="password_confirmation" label="Confirm password" type="password" required autocomplete="new-password" />
 
-                <button type="submit" class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">
+                <button type="submit" class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
                     Register
                 </button>
             </form>

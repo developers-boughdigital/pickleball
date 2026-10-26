@@ -90,9 +90,9 @@
 
                 <div class="mt-8 flex justify-end">
                     @if ($meetsRequirements)
-                        <button type="button" @click="next()" class="btn-gold h-12 px-6 text-base">Let’s go</button>
+                        <button type="button" @click="next()" class="btn-gold h-9 px-4">Let’s go</button>
                     @else
-                        <a href="{{ url('/install') }}" data-reload class="btn-outline h-12 px-6 text-base">Check again</a>
+                        <a href="{{ url('/install') }}" data-reload class="btn-outline h-9 px-4">Check again</a>
                     @endif
                 </div>
             </section>
@@ -108,10 +108,10 @@
                 <x-install.field name="app_url" label="Site address (URL)" type="url" required hint="The address people type to reach the site, without a trailing slash." />
 
                 <fieldset>
-                    <legend class="text-base font-medium">Environment</legend>
+                    <legend class="text-sm font-medium">Environment</legend>
                     <div class="mt-2 grid gap-3 sm:grid-cols-2">
                         @foreach (['production' => ['Live site', 'Errors are hidden from visitors.'], 'local' => ['Development', 'Shows detailed errors. Not for a live site.']] as $value => [$title, $description])
-                            <label class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-4 has-checked:border-brand-500 has-checked:bg-brand-50">
+                            <label class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-3 has-checked:border-brand-500 has-checked:bg-brand-50">
                                 <input type="radio" name="app_env" value="{{ $value }}" x-model="form.app_env" class="mt-1 size-4 accent-brand-500">
                                 <span>
                                     <span class="block font-medium">{{ $title }}</span>
@@ -123,8 +123,8 @@
                 </fieldset>
 
                 <div class="flex justify-between gap-3 pt-2">
-                    <button type="button" @click="back()" class="btn-outline h-12 px-5 text-base">Back</button>
-                    <button class="btn-gold h-12 px-6 text-base">Continue</button>
+                    <button type="button" @click="back()" class="btn-outline h-9">Back</button>
+                    <button class="btn-gold h-9 px-4">Continue</button>
                 </div>
             </form>
 
@@ -136,7 +136,7 @@
                 </div>
 
                 <fieldset>
-                    <legend class="text-base font-medium">Database type</legend>
+                    <legend class="text-sm font-medium">Database type</legend>
                     <div class="mt-2 grid gap-3 sm:grid-cols-3">
                         @foreach ($drivers as $value => $driver)
                             <label @class([
@@ -182,12 +182,12 @@
                 </div>
 
                 <div class="flex flex-wrap justify-between gap-3 pt-2">
-                    <button type="button" @click="back()" class="btn-outline h-12 px-5 text-base">Back</button>
+                    <button type="button" @click="back()" class="btn-outline h-9">Back</button>
                     <div class="flex flex-wrap gap-3">
-                        <button type="button" @click="$el.form.reportValidity() && checkDatabase()" :disabled="busy" class="btn-outline h-12 px-5 text-base disabled:opacity-60">
+                        <button type="button" @click="$el.form.reportValidity() && checkDatabase()" :disabled="busy" class="btn-outline h-9 disabled:opacity-60">
                             Test connection
                         </button>
-                        <button :disabled="busy" class="btn-gold h-12 px-6 text-base disabled:opacity-60">
+                        <button :disabled="busy" class="btn-gold h-9 px-4 disabled:opacity-60">
                             <span x-text="busy ? 'Checking…' : 'Continue'"></span>
                         </button>
                     </div>
@@ -214,8 +214,8 @@
                 </div>
 
                 <div class="flex justify-between gap-3 pt-2">
-                    <button type="button" @click="back()" :disabled="busy" class="btn-outline h-12 px-5 text-base">Back</button>
-                    <button :disabled="busy" class="btn-gold h-12 px-6 text-base disabled:opacity-60">
+                    <button type="button" @click="back()" :disabled="busy" class="btn-outline h-9">Back</button>
+                    <button :disabled="busy" class="btn-gold h-9 px-4 disabled:opacity-60">
                         <svg x-show="busy" x-cloak class="size-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3" />
                             <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
@@ -242,7 +242,7 @@
                     <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-500">Admin</dt><dd class="truncate font-medium" x-text="form.admin_email"></dd></div>
                 </dl>
 
-                <a :href="loginUrl" class="btn-gold mt-8 h-12 px-8 text-base">Log in</a>
+                <a :href="loginUrl" class="btn-gold mt-6 h-9 px-6">Log in</a>
             </section>
         </main>
 

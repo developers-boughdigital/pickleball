@@ -23,7 +23,7 @@
 
             <div class="grid gap-3 lg:grid-cols-2">
                 <div>
-                    <label for="name" class="block font-medium">Name</label>
+                    <label for="name" class="block text-sm font-medium">Name</label>
                     <input
                         id="name"
                         name="name"
@@ -31,7 +31,7 @@
                         required
                         maxlength="60"
                         @readonly($role->isProtected())
-                        @class(['field mt-2 h-10 w-full text-base', 'bg-slate-50 text-slate-500' => $role->isProtected(), 'border-red-500' => $errors->has('name')])
+                        @class(['field mt-1 w-full', 'bg-slate-50 text-slate-500' => $role->isProtected(), 'border-red-500' => $errors->has('name')])
                     >
                     @if ($role->isProtected())
                         <p class="mt-1.5 text-sm text-slate-500">This role can’t be renamed.</p>
@@ -40,13 +40,13 @@
                 </div>
 
                 <div>
-                    <label for="description" class="block font-medium">Description <span class="font-normal text-slate-500">(optional)</span></label>
+                    <label for="description" class="block text-sm font-medium">Description <span class="font-normal text-slate-500">(optional)</span></label>
                     <input
                         id="description"
                         name="description"
                         value="{{ old('description', $role->description) }}"
                         maxlength="255"
-                        @class(['field mt-2 h-10 w-full text-base', 'border-red-500' => $errors->has('description')])
+                        @class(['field mt-1 w-full', 'border-red-500' => $errors->has('description')])
                     >
                     @error('description') <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
@@ -75,8 +75,8 @@
         </section>
 
         <div class="flex flex-wrap justify-end gap-3">
-            <a href="{{ route('admin.roles.index') }}" class="btn-outline h-10 px-5">Cancel</a>
-            <button class="btn-gold h-10 px-6">{{ $editing ? 'Save role' : 'Create role' }}</button>
+            <a href="{{ route('admin.roles.index') }}" class="btn-outline">Cancel</a>
+            <button class="btn-gold">{{ $editing ? 'Save role' : 'Create role' }}</button>
         </div>
     </form>
 </x-admin.layout>

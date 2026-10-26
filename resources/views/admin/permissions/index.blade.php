@@ -5,7 +5,7 @@
 
     <div class="mt-3">
         <x-admin.page-header title="Permissions" subtitle="What people can do in each module. Roles are given these on the role page.">
-            <a href="{{ route('admin.permissions.create') }}" class="btn-gold h-9">
+            <a href="{{ route('admin.permissions.create') }}" class="btn-gold">
                 <x-icon name="plus" />
                 Add permission
             </a>
@@ -46,8 +46,8 @@
                             <td class="px-4 py-2.5 tabular-nums">{{ $permission->roles_count }}</td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1">
-                                    <a href="{{ route('admin.permissions.edit', $permission) }}" class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $permission->name }}">
-                                        <x-icon name="pencil" />
+                                    <a href="{{ route('admin.permissions.edit', $permission) }}" class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $permission->name }}">
+                                        <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $permission->name }}</span>
                                     </a>
                                     <form
@@ -57,8 +57,8 @@
                                     >
                                         @csrf
                                         @method('DELETE')
-                                        <button class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $permission->name }}">
-                                            <x-icon name="trash" />
+                                        <button class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $permission->name }}">
+                                            <x-icon name="trash" class="size-4" />
                                             <span class="sr-only">Delete {{ $permission->name }}</span>
                                         </button>
                                     </form>

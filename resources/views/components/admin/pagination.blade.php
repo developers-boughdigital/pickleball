@@ -6,7 +6,7 @@
     $current = $paginator->currentPage();
     // Current page ±1, plus the first and last, with gaps shown as "…".
     $pages = collect([1, $current - 1, $current, $current + 1, $last])->filter(fn ($p) => $p >= 1 && $p <= $last)->unique()->sort()->values();
-    $link = 'grid size-8 place-items-center rounded-lg border border-slate-200 text-sm hover:bg-slate-50';
+    $link = 'grid size-7 place-items-center rounded-lg border border-slate-200 text-sm hover:bg-slate-50';
 @endphp
 
 <div class="flex flex-col gap-3 border-t border-slate-200 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -31,7 +31,7 @@
                     <span class="px-0.5 text-slate-400">…</span>
                 @endif
                 @if ($page === $current)
-                    <span class="grid size-8 place-items-center rounded-lg bg-brand-500 text-sm font-medium text-ink-950" aria-current="page">{{ $page }}</span>
+                    <span class="grid size-7 place-items-center rounded-lg bg-brand-500 text-sm font-medium text-ink-950" aria-current="page">{{ $page }}</span>
                 @else
                     <a href="{{ $paginator->url($page) }}" class="{{ $link }}">{{ $page }}</a>
                 @endif

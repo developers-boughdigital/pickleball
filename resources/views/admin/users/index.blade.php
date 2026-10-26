@@ -1,6 +1,6 @@
 <x-admin.layout title="Users" :breadcrumb="['User & Security', 'Users']">
     <x-admin.page-header title="Users" subtitle="Everyone who can sign in, and the roles they hold.">
-        <a href="{{ route('admin.users.create') }}" class="btn-gold h-9">
+        <a href="{{ route('admin.users.create') }}" class="btn-gold">
             <x-icon name="user-plus" />
             Add user
         </a>
@@ -56,21 +56,21 @@
                             <td class="px-4 py-2.5 text-slate-500" title="{{ $user->created_at?->format('j M Y, g:i A') }}">{{ $user->created_at?->format('j M Y') }}</td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1">
-                                    <a href="{{ route('admin.users.edit', $user) }}" class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $user->name }}">
-                                        <x-icon name="pencil" />
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink-950" title="Edit {{ $user->name }}">
+                                        <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $user->name }}</span>
                                     </a>
                                     @if ($isMe)
-                                        <span class="grid size-9 place-items-center text-slate-300" title="You can’t delete your own account">
-                                            <x-icon name="trash" />
+                                        <span class="grid size-8 place-items-center text-slate-300" title="You can’t delete your own account">
+                                            <x-icon name="trash" class="size-4" />
                                             <span class="sr-only">You can’t delete your own account</span>
                                         </span>
                                     @else
                                         <form method="POST" action="{{ route('admin.users.destroy', $user) }}" @submit="confirm(@js("Delete {$user->name} ({$user->email})? They won’t be able to sign in.")) || $event.preventDefault()">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="grid size-9 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $user->name }}">
-                                                <x-icon name="trash" />
+                                            <button class="grid size-8 place-items-center rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600" title="Delete {{ $user->name }}">
+                                                <x-icon name="trash" class="size-4" />
                                                 <span class="sr-only">Delete {{ $user->name }}</span>
                                             </button>
                                         </form>

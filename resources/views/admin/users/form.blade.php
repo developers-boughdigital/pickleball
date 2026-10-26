@@ -23,25 +23,25 @@
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label for="name" class="block font-medium">Name</label>
-                    <input id="name" name="name" value="{{ old('name', $user->name) }}" required maxlength="255" autocomplete="off" @class(['field mt-1.5 h-10 w-full', 'border-red-500' => $errors->has('name')])>
+                    <label for="name" class="block text-sm font-medium">Name</label>
+                    <input id="name" name="name" value="{{ old('name', $user->name) }}" required maxlength="255" autocomplete="off" @class(['field mt-1 w-full', 'border-red-500' => $errors->has('name')])>
                     @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="email" class="block font-medium">Email</label>
-                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required maxlength="255" autocomplete="off" @class(['field mt-1.5 h-10 w-full', 'border-red-500' => $errors->has('email')])>
+                    <label for="email" class="block text-sm font-medium">Email</label>
+                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required maxlength="255" autocomplete="off" @class(['field mt-1 w-full', 'border-red-500' => $errors->has('email')])>
                     @error('email') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="password" class="block font-medium">
+                    <label for="password" class="block text-sm font-medium">
                         Password @if ($editing) <span class="font-normal text-slate-500">(leave blank to keep)</span> @endif
                     </label>
-                    <input id="password" name="password" type="password" @required(! $editing) autocomplete="new-password" @class(['field mt-1.5 h-10 w-full', 'border-red-500' => $errors->has('password')])>
+                    <input id="password" name="password" type="password" @required(! $editing) autocomplete="new-password" @class(['field mt-1 w-full', 'border-red-500' => $errors->has('password')])>
                     @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="password_confirmation" class="block font-medium">Confirm password</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" @required(! $editing) autocomplete="new-password" class="field mt-1.5 h-10 w-full">
+                    <label for="password_confirmation" class="block text-sm font-medium">Confirm password</label>
+                    <input id="password_confirmation" name="password_confirmation" type="password" @required(! $editing) autocomplete="new-password" class="field mt-1 w-full">
                 </div>
             </div>
         </section>
@@ -53,10 +53,10 @@
 
             <div class="mt-3 grid gap-2 sm:grid-cols-2">
                 @forelse ($roles as $role)
-                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2.5 has-checked:border-brand-500 has-checked:bg-brand-50">
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 has-checked:border-brand-500 has-checked:bg-brand-50">
                         <input type="checkbox" name="roles[]" value="{{ $role->name }}" @checked(in_array($role->name, $assigned)) class="mt-0.5 size-4 shrink-0 accent-brand-500">
                         <span>
-                            <span class="block font-medium">{{ $role->name }}</span>
+                            <span class="block text-sm font-medium">{{ $role->name }}</span>
                             <span class="block text-sm text-slate-500">{{ $role->description ?: $role->permissions_count.' '.str('permission')->plural($role->permissions_count) }}</span>
                         </span>
                     </label>
@@ -67,8 +67,8 @@
         </section>
 
         <div class="flex flex-wrap justify-end gap-3">
-            <a href="{{ route('admin.users.index') }}" class="btn-outline h-10 px-5">Cancel</a>
-            <button class="btn-gold h-10 px-6">{{ $editing ? 'Save user' : 'Add user' }}</button>
+            <a href="{{ route('admin.users.index') }}" class="btn-outline">Cancel</a>
+            <button class="btn-gold">{{ $editing ? 'Save user' : 'Add user' }}</button>
         </div>
     </form>
 </x-admin.layout>

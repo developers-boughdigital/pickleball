@@ -35,7 +35,7 @@
         @endif
 
         <div>
-            <label for="module" class="block font-medium">Module</label>
+            <label for="module" class="block text-sm font-medium">Module</label>
             <input
                 id="module"
                 name="module"
@@ -45,7 +45,7 @@
                 required
                 maxlength="60"
                 placeholder="e.g. Customers"
-                @class(['field mt-1.5 h-10 w-full', 'border-red-500' => $errors->has('module')])
+                @class(['field mt-1 w-full', 'border-red-500' => $errors->has('module')])
             >
             <datalist id="module-names">
                 @foreach ($modules as $name)
@@ -57,7 +57,7 @@
         </div>
 
         <div>
-            <label for="name" class="block font-medium">Permission</label>
+            <label for="name" class="block text-sm font-medium">Permission</label>
             <input
                 id="name"
                 name="name"
@@ -69,7 +69,7 @@
                 placeholder="e.g. customers.export"
                 autocomplete="off"
                 spellcheck="false"
-                @class(['field mt-1.5 h-10 w-full font-mono', 'border-red-500' => $errors->has('name')])
+                @class(['field mt-1 w-full font-mono', 'border-red-500' => $errors->has('name')])
             >
             <p class="mt-1 text-sm text-slate-500">
                 Lowercase <code>module.action</code>. Code checks this name, e.g. <code>@@can('customers.export')</code>
@@ -81,21 +81,21 @@
         </div>
 
         <div>
-            <label for="description" class="block font-medium">Purpose <span class="font-normal text-slate-500">(optional)</span></label>
+            <label for="description" class="block text-sm font-medium">Purpose <span class="font-normal text-slate-500">(optional)</span></label>
             <input
                 id="description"
                 name="description"
                 value="{{ old('description', $permission->description) }}"
                 maxlength="255"
                 placeholder="e.g. Export customers"
-                @class(['field mt-1.5 h-10 w-full', 'border-red-500' => $errors->has('description')])
+                @class(['field mt-1 w-full', 'border-red-500' => $errors->has('description')])
             >
             @error('description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
         </div>
 
         <div class="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
-            <a href="{{ route('admin.permissions.index') }}" class="btn-outline h-10 px-5">Cancel</a>
-            <button class="btn-gold h-10 px-6">{{ $editing ? 'Save permission' : 'Add permission' }}</button>
+            <a href="{{ route('admin.permissions.index') }}" class="btn-outline">Cancel</a>
+            <button class="btn-gold">{{ $editing ? 'Save permission' : 'Add permission' }}</button>
         </div>
     </form>
 </x-admin.layout>

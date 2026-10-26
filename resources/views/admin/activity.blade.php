@@ -14,7 +14,7 @@
         <x-admin.select name="actor" :options="$actors" :selected="$filters['actor']" placeholder="Everyone" class="w-full sm:w-auto sm:flex-1 xl:min-w-0" />
         <x-admin.select name="action" :options="$actions" :selected="$filters['action']" placeholder="All actions" class="w-full sm:w-auto sm:flex-1 xl:min-w-0" />
         <x-admin.select name="result" :options="$results" :selected="$filters['result']" placeholder="Any result" class="w-full sm:w-auto sm:flex-1 xl:min-w-0" />
-        <a href="{{ route('admin.activity') }}" class="btn-outline h-9 w-full shrink-0 text-brand-600 sm:w-auto">Clear filters</a>
+        <a href="{{ route('admin.activity') }}" class="btn-outline w-full shrink-0 text-brand-600 sm:w-auto">Clear filters</a>
     </form>
 
     <div class="card mt-3 overflow-hidden">
