@@ -20,6 +20,8 @@
                 </button>
             </form>
 
+            @include('auth.partials.google')
+
             <p class="mt-6 text-center text-sm text-slate-500">
                 Don't have an account?
                 <a href="{{ route('register') }}" class="font-medium text-emerald-600 hover:underline">Register</a>

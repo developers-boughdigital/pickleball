@@ -17,6 +17,8 @@
                 </button>
             </form>
 
+            @include('auth.partials.google')
+
             <p class="mt-6 text-center text-sm text-slate-500">
                 Already have an account?
                 <a href="{{ route('login') }}" class="font-medium text-emerald-600 hover:underline">Log in</a>
