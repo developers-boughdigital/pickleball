@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-50: #fef8e8;
+    --color-brand-100: #fdefc6;
+    --color-brand-200: #fbe08c;
+    --color-brand-300: #f9d35c;
+    --color-brand-400: #f5c22c;
+    --color-brand-500: #eeb008;
+    --color-brand-600: #c98f00;
+    --color-brand-700: #a07000;
+
+    --color-ink-900: #111821;
+    --color-ink-950: #0a1017;
+
+    --animate-progress: progress 1s ease-in-out infinite;
+
+    @keyframes progress {
+        from {
+            transform: translateX(-100%);
+        }
+        to {
+            transform: translateX(300%);
+        }
+    }
+}
+
+/* Desktop sidebar collapsed to the icon rail (class lives on <html>). */
+@custom-variant collapsed (.sidebar-collapsed &);
+
+[x-cloak] {
+    display: none !important;
+}
+
+@layer components {
+    .card {
+        @apply rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgb(15_23_42/0.06)];
+    }
+
+    .btn-gold {
+        @apply inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-linear-to-r from-brand-500 to-brand-300 px-3 text-sm font-semibold whitespace-nowrap text-ink-950 shadow-[0_4px_10px_-4px_rgb(238_176_8/0.6)] ring-1 ring-brand-500/60 transition hover:brightness-105;
+    }
+
+    .btn-outline {
+        @apply inline-flex items-center justify-center gap-1.5 h-8 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium whitespace-nowrap text-ink-950 transition hover:bg-slate-50;
+    }
+
+    .field {
+        @apply h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-ink-950 placeholder:text-slate-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none;
+    }
+
+    .nav-active {
+        @apply bg-linear-to-r from-brand-500 to-brand-300 text-ink-950 shadow-[0_6px_18px_-8px_rgb(238_176_8/0.8)];
+    }
+
+    /* Row actions in tables */
+    .icon-btn-edit,
+    .icon-btn-delete,
+    .icon-btn-locked {
+        @apply grid size-8 place-items-center transition;
+    }
+
+    .icon-btn-edit {
+        @apply text-sky-600 hover:text-sky-800;
+    }
+
+    .icon-btn-delete {
+        @apply text-red-600 hover:text-red-800;
+    }
+
+    .icon-btn-locked {
+        @apply cursor-not-allowed text-slate-300;
+    }
+
+    .badge-gold,
+    .badge-muted,
+    .badge-danger {
+        @apply inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap;
+    }
+
+    .badge-gold {
+        @apply bg-linear-to-r from-brand-500 to-brand-300 text-ink-950 ring-1 ring-brand-500/40;
+    }
+
+    .badge-muted {
+        @apply bg-slate-100 text-slate-700 ring-1 ring-slate-300;
+    }
+
+    .badge-danger {
+        @apply bg-red-600 text-white;
+    }
+}
