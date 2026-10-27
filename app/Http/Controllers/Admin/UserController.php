@@ -58,7 +58,28 @@ class UserController extends Controller
             'roles' => ['from' => [], 'to' => $user->getRoleNames()->all()],
         ]);
 
-        return redirect()->route('admin.users.index')->with('status', "User {$user->name} created.");
+        return redirect()->route('admin.users.show', $user)->with('status', "User {$user->name} created.");
+    }
+
+    public function show(User $user): View
+    {
+        $user->load('roles');
+
+        return view('admin.users.show', [
+            'user' => $user,
+            'permissions' => $user->getAllPermissions()
+                ->sortBy('name')
+                ->groupBy(fn ($permission) => $permission->module ?? 'Other')
+                ->sortKeys(),
+            // Things they did, plus changes other people made to their account.
+            'activity' => ActivityLog::query()
+                ->where('user_id', $user->id)
+                ->orWhere(fn ($query) => $query->where('subject_type', 'User')->where('subject_id', $user->id))
+                ->latest('created_at')
+                ->latest('id')
+                ->take(10)
+                ->get(),
+        ]);
     }
 
     public function edit(User $user): View
@@ -90,7 +111,7 @@ class UserController extends Controller
             ActivityLog::record('user.updated', "Updated user {$user->email}", $user, $user->name, $changes);
         }
 
-        return redirect()->route('admin.users.index')->with('status', "User {$user->name} saved.");
+        return redirect()->route('admin.users.show', $user)->with('status', "User {$user->name} saved.");
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

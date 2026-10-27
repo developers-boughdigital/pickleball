@@ -38,7 +38,7 @@
                                 <div class="flex items-center gap-3">
                                     <x-admin.avatar :initials="$user->initials()" :tone="$isMe ? 'solid' : 'gray'" />
                                     <div>
-                                        <a href="{{ route('admin.users.edit', $user) }}" class="font-medium hover:underline">{{ $user->name }}</a>
+                                        <a href="{{ route('admin.users.show', $user) }}" class="font-medium hover:underline">{{ $user->name }}</a>
                                         @if ($isMe)
                                             <span class="ml-1 text-xs text-slate-500">(you)</span>
                                         @endif
@@ -56,6 +56,10 @@
                             <td class="px-4 py-2.5 text-slate-500" title="{{ $user->created_at?->format('j M Y, g:i A') }}">{{ $user->created_at?->format('j M Y') }}</td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1.5">
+                                    <a href="{{ route('admin.users.show', $user) }}" class="icon-btn-view" title="View {{ $user->name }}">
+                                        <x-icon name="eye" class="size-4" />
+                                        <span class="sr-only">View {{ $user->name }}</span>
+                                    </a>
                                     <a href="{{ route('admin.users.edit', $user) }}" class="icon-btn-edit" title="Edit {{ $user->name }}">
                                         <x-icon name="pencil" class="size-4" />
                                         <span class="sr-only">Edit {{ $user->name }}</span>

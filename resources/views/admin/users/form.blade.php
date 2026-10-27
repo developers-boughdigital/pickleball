@@ -105,7 +105,7 @@
         </div>
 
         <x-admin.form-actions>
-            <a href="{{ route('admin.users.index') }}" class="btn-outline">Cancel</a>
+            <a href="{{ $editing ? route('admin.users.show', $user) : route('admin.users.index') }}" class="btn-outline">Cancel</a>
             <button class="btn-gold">
                 <x-icon name="check" class="size-4" />
                 {{ $editing ? 'Save changes' : 'Add user' }}

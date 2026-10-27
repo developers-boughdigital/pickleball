@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\DatabaseController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
+use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('home'))->name('home');
@@ -28,10 +30,18 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::resource('users', UserController::class)->except('show');
+        Route::resource('users', UserController::class);
         Route::resource('roles', RoleController::class)->except('show');
         Route::resource('permissions', PermissionController::class)->except('show');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
+
+        Route::middleware('role:'.Role::SUPER_ADMIN)->controller(DatabaseController::class)->group(function () {
+            Route::get('database', 'index')->name('database');
+            Route::post('database/migrate', 'migrate')->name('database.migrate');
+            Route::post('database/rollback', 'rollback')->name('database.rollback');
+            Route::post('database/rollback-migration', 'rollbackMigration')->name('database.rollback-migration');
+            Route::post('database/seed', 'seed')->name('database.seed');
+        });
     });
 
     Route::post('logout', LogoutController::class)->name('logout');

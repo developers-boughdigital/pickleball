@@ -46,21 +46,60 @@ class UserManagementTest extends TestCase
     {
         $this->get('/admin/users/create')->assertOk()->assertSee('Add user')->assertSee('Viewer');
 
-        $this->post('/admin/users', [
+        $response = $this->post('/admin/users', [
             'name' => 'Dara Vong',
             'email' => 'DARA@Example.com',
             'password' => 'a-good-password',
             'password_confirmation' => 'a-good-password',
             'roles' => ['Viewer'],
-        ])->assertRedirect('/admin/users');
+        ]);
 
         $dara = User::firstWhere('email', 'dara@example.com');
+        $response->assertRedirect(route('admin.users.show', $dara));
         $this->assertTrue(Hash::check('a-good-password', $dara->password));
         $this->assertSame(['Viewer'], $dara->getRoleNames()->all());
 
         $log = ActivityLog::firstWhere('action', 'user.created');
         $this->assertSame('Megan Clarke', $log->actor_name);
         $this->assertSame(['from' => [], 'to' => ['Viewer']], $log->changes['roles']);
+    }
+
+    public function test_user_detail_page_shows_account_roles_permissions_and_activity(): void
+    {
+        $tom = User::factory()->create(['name' => 'Tom Nguyen', 'email' => 'tom@example.com'])->assignRole('Viewer');
+        ActivityLog::record('user.updated', 'Updated user tom@example.com', $tom, $tom->name);
+
+        $this->get('/admin/users')->assertSee(route('admin.users.show', $tom));
+
+        $this->get("/admin/users/{$tom->id}")
+            ->assertOk()
+            ->assertSee('Tom Nguyen')
+            ->assertSee('tom@example.com')
+            ->assertSeeInOrder(['Signs in with', 'Password'])
+            ->assertSeeInOrder(['Roles', 'Viewer'])
+            ->assertSeeInOrder(['What they can do', 'Users', 'View users'])
+            ->assertDontSee('Delete users')
+            ->assertSeeInOrder(['Recent activity', 'Megan Clarke', 'updated user tom@example.com'])
+            ->assertSee(route('admin.users.edit', $tom));
+    }
+
+    public function test_detail_page_for_yourself_has_no_delete_button(): void
+    {
+        $this->get("/admin/users/{$this->me->id}")
+            ->assertOk()
+            ->assertSee('(you)')
+            ->assertDontSee('action="'.route('admin.users.destroy', $this->me).'"', false);
+    }
+
+    public function test_detail_page_for_a_user_without_a_role(): void
+    {
+        $nobody = User::factory()->create(['google_id' => 'g-1']);
+
+        $this->get("/admin/users/{$nobody->id}")
+            ->assertOk()
+            ->assertSee('No role yet')
+            ->assertSee('Password and Google')
+            ->assertDontSee('What they can do');
     }
 
     public function test_user_validation(): void
@@ -81,7 +120,7 @@ class UserManagementTest extends TestCase
             'email' => 'tom@example.com',
             'password' => '',
             'roles' => [Role::SUPER_ADMIN],
-        ])->assertRedirect('/admin/users');
+        ])->assertRedirect("/admin/users/{$tom->id}");
 
         $tom->refresh();
         $this->assertSame('Tom Nguyen', $tom->name);

@@ -53,6 +53,11 @@
         @apply inline-flex items-center justify-center gap-1.5 h-8 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium whitespace-nowrap text-ink-950 transition hover:bg-slate-50;
     }
 
+    .btn-gold:disabled,
+    .btn-outline:disabled {
+        @apply cursor-not-allowed opacity-50 shadow-none hover:brightness-100;
+    }
+
     .field {
         @apply h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-ink-950 placeholder:text-slate-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none;
     }
@@ -62,10 +67,15 @@
     }
 
     /* Row actions in tables */
+    .icon-btn-view,
     .icon-btn-edit,
     .icon-btn-delete,
     .icon-btn-locked {
         @apply grid size-8 place-items-center transition;
+    }
+
+    .icon-btn-view {
+        @apply text-slate-500 hover:text-ink-950;
     }
 
     .icon-btn-edit {
@@ -82,8 +92,10 @@
 
     .badge-gold,
     .badge-muted,
-    .badge-danger {
-        @apply inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap;
+    .badge-danger,
+    .badge-success,
+    .badge-pending {
+        @apply inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap;
     }
 
     .badge-gold {
@@ -96,5 +108,13 @@
 
     .badge-danger {
         @apply bg-red-600 text-white;
+    }
+
+    .badge-success {
+        @apply bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300;
+    }
+
+    .badge-pending {
+        @apply bg-amber-100 text-amber-800 ring-1 ring-amber-300;
     }
 }

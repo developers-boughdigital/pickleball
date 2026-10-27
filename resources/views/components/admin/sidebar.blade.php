@@ -1,7 +1,7 @@
 @php
     // Each item: label, compact label + icon for the tablet rail, route (null = not built yet),
-    // route patterns that mark it active, and optional children.
-    $nav = [
+    // route patterns that mark it active, optional children, and an optional role needed to see it.
+    $nav = collect([
         ['label' => 'Overview', 'short' => 'Overview', 'icon' => 'layout-grid', 'rail' => 'layout-grid', 'route' => 'dashboard', 'active' => ['dashboard']],
         ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users.index', 'active' => ['admin.users.*', 'admin.roles.*', 'admin.permissions.*', 'admin.activity'], 'children' => [
             ['label' => 'Users', 'route' => 'admin.users.index', 'active' => ['admin.users.*']],
@@ -9,7 +9,8 @@
             ['label' => 'Activity Log', 'route' => 'admin.activity'],
         ]],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings'],
-    ];
+        ['label' => 'Database', 'short' => 'Database', 'icon' => 'database', 'rail' => 'database', 'route' => 'admin.database', 'active' => ['admin.database*'], 'role' => \App\Models\Role::SUPER_ADMIN],
+    ])->filter(fn (array $item) => ! isset($item['role']) || auth()->user()?->hasRole($item['role']));
 
     $href = fn (array $item) => isset($item['route']) ? route($item['route']) : '#';
     $isActive = fn (array $item) => isset($item['active']) && request()->routeIs(...$item['active']);

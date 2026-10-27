@@ -18,9 +18,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ])->assignRole(Role::SUPER_ADMIN);
+        // A known login with full access is fine on a laptop, never on a real server.
+        if (app()->environment('local', 'testing')) {
+            User::firstOrCreate(
+                ['email' => 'test@example.com'],
+                ['name' => 'Test User', 'password' => 'password'],
+            )->assignRole(Role::SUPER_ADMIN);
+        }
     }
 }
