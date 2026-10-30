@@ -23,7 +23,7 @@ class Venue extends Model
 
     public const COURT_LINES = ['Dedicated pickleball courts', 'Shared lines (tennis or other)', 'Both'];
 
-    public const STATUSES = ['To check', 'Checked', 'Needs follow-up', 'Duplicate', 'Closed'];
+    public const STATUSES = ['Open', 'Closed'];
 
     public const SOURCE_TYPES = [
         'Own website', 'Council website', 'Phone call', 'Email reply', 'Facebook or Instagram',
@@ -127,11 +127,7 @@ class Venue extends Model
 
     public function statusBadge(): string
     {
-        return match ($this->status) {
-            'Checked' => 'badge-success',
-            'To check', 'Needs follow-up' => 'badge-pending',
-            default => 'badge-muted',
-        };
+        return $this->status === 'Open' ? 'badge-success' : 'badge-muted';
     }
 
     /** true / false / null (unknown) */

@@ -40,8 +40,8 @@ class VenueController extends Controller implements HasMiddleware
             'filters' => $filters,
             'stats' => [
                 'total' => Venue::count(),
-                'checked' => Venue::where('status', 'Checked')->count(),
-                'toCheck' => Venue::where('status', 'To check')->count(),
+                'open' => Venue::where('status', 'Open')->count(),
+                'closed' => Venue::where('status', 'Closed')->count(),
                 'courts' => (int) Venue::sum('court_count'),
                 'states' => Venue::distinct()->count('state'),
             ],
@@ -50,7 +50,7 @@ class VenueController extends Controller implements HasMiddleware
 
     public function create(): View
     {
-        return view('admin.venues.form', ['venue' => new Venue(['status' => 'To check', 'code' => Venue::nextCode()])]);
+        return view('admin.venues.form', ['venue' => new Venue(['status' => 'Open','code' => Venue::nextCode()])]);
     }
 
     public function store(VenueRequest $request): RedirectResponse

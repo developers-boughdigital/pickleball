@@ -35,7 +35,7 @@
                     <x-admin.input name="name" label="Venue name" icon="map-pin" :value="$value('name')" x-model="name" required maxlength="255" placeholder="e.g. Pickledome" />
                 </div>
                 <x-admin.input name="code" label="Venue ID" icon="tag" :value="$value('code')" maxlength="20" class="font-mono" hint="Matches the directory spreadsheet." />
-                <x-admin.field-select name="status" label="Record status" :options="Venue::STATUSES" :selected="$value('status')" :placeholder="false" />
+                <x-admin.field-select name="status" label="Status" :options="Venue::STATUSES" :selected="$value('status')" :placeholder="false" />
                 <x-admin.field-select name="venue_type" label="Venue type" :options="Venue::TYPES" :selected="$value('venue_type')" />
             </div>
         </section>

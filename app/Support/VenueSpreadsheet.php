@@ -62,7 +62,7 @@ class VenueSpreadsheet
         'Source URL' => 'source_url',
         'Date checked' => 'checked_at',
         'Checked by' => 'checked_by',
-        'Record status' => 'status',
+        'Status' => 'status',
         'Notes' => 'notes',
     ];
 
@@ -104,6 +104,7 @@ class VenueSpreadsheet
                 }
 
                 $venue = filled($data['code'] ?? null) ? Venue::withTrashed()->firstWhere('code', $data['code']) : null;
+                $data['status'] ??= $venue->status ?? 'Open';
                 $validator = Validator::make($data, VenueRequest::fields($venue), [], VenueRequest::labels());
 
                 if ($validator->fails()) {
@@ -188,7 +189,11 @@ class VenueSpreadsheet
             }
         }
 
-        $data['status'] ??= 'To check';
+        // The directory workbook has "Record status" (To check, Checked, ...) instead of
+        // Status; only its "Closed" means anything here.
+        if (! array_key_exists('Status', $row) && strcasecmp(trim((string) ($row['Record status'] ?? '')), 'Closed') === 0) {
+            $data['status'] = 'Closed';
+        }
 
         return $data;
     }

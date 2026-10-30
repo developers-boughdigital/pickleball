@@ -99,8 +99,8 @@
 
     <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <x-admin.stat label="Venues" :value="number_format($stats['total'])" :note="'Across '.$stats['states'].' '.str('state')->plural($stats['states'])" />
-        <x-admin.stat label="Checked" :value="number_format($stats['checked'])" note="Every required detail confirmed" note-class="text-emerald-600" />
-        <x-admin.stat label="To check" :value="number_format($stats['toCheck'])" note="Waiting to be verified" note-class="text-amber-600" />
+        <x-admin.stat label="Open" :value="number_format($stats['open'])" note="Open to play" note-class="text-emerald-600" />
+        <x-admin.stat label="Closed" :value="number_format($stats['closed'])" note="No longer open" note-class="text-slate-500" />
         <x-admin.stat label="Courts listed" :value="number_format($stats['courts'])" note="Where the count is known" note-class="text-slate-500" />
     </div>
 
