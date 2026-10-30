@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VenueController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
@@ -35,6 +36,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('roles', RoleController::class)->except('show');
         Route::resource('permissions', PermissionController::class)->except('show');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
+
+        // Before the resource, so "export" isn't read as a venue slug.
+        Route::get('venues/export', [VenueController::class, 'export'])->name('venues.export');
+        Route::post('venues/import', [VenueController::class, 'import'])->name('venues.import');
+        Route::resource('venues', VenueController::class);
 
         Route::get('settings', [SettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings');
         Route::put('settings', [SettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');

@@ -8,6 +8,7 @@
             ['label' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'active' => ['admin.roles.*', 'admin.permissions.*']],
             ['label' => 'Activity Log', 'route' => 'admin.activity'],
         ]],
+        ['label' => 'Venues', 'short' => 'Venues', 'icon' => 'map-pin', 'rail' => 'map-pin', 'route' => 'admin.venues.index', 'active' => ['admin.venues.*'], 'can' => 'venues.view'],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings', 'route' => 'admin.settings', 'active' => ['admin.settings*'], 'can' => 'settings.view'],
         ['label' => 'Database', 'short' => 'Database', 'icon' => 'database', 'rail' => 'database', 'route' => 'admin.database', 'active' => ['admin.database*'], 'role' => \App\Models\Role::SUPER_ADMIN],
     ])->filter(fn (array $item) => (! isset($item['role']) || auth()->user()?->hasRole($item['role']))

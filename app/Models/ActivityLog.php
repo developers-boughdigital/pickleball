@@ -55,7 +55,7 @@ class ActivityLog extends Model
             'actor_name' => $actor?->name ?? $actorName,
             'action' => $action,
             'subject_type' => $subject ? class_basename($subject) : null,
-            'subject_id' => $subject?->getKey(),
+            'subject_id' => $subject ? (string) $subject->getKey() : null,
             'subject_label' => $subjectLabel,
             'description' => $description,
             'succeeded' => $succeeded,

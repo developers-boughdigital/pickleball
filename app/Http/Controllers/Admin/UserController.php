@@ -74,7 +74,7 @@ class UserController extends Controller
             // Things they did, plus changes other people made to their account.
             'activity' => ActivityLog::query()
                 ->where('user_id', $user->id)
-                ->orWhere(fn ($query) => $query->where('subject_type', 'User')->where('subject_id', $user->id))
+                ->orWhere(fn ($query) => $query->where('subject_type', 'User')->where('subject_id', (string) $user->id))
                 ->latest('created_at')
                 ->latest('id')
                 ->take(10)

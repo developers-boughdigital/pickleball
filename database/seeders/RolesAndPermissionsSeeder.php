@@ -44,6 +44,14 @@ class RolesAndPermissionsSeeder extends Seeder
         'Activity Log' => [
             'activity.view' => 'View the audit log',
         ],
+        'Venues' => [
+            'venues.view' => 'View venues',
+            'venues.create' => 'Add venues',
+            'venues.update' => 'Edit venues',
+            'venues.delete' => 'Delete venues',
+            'venues.import' => 'Import venues from a spreadsheet',
+            'venues.export' => 'Export venues to a spreadsheet',
+        ],
         'System Settings' => [
             'settings.view' => 'View system settings',
             'settings.update' => 'Change system settings',
@@ -73,7 +81,11 @@ class RolesAndPermissionsSeeder extends Seeder
         foreach ($roles as $name => [$description, $permissions]) {
             $role = Role::firstOrNew(['name' => $name, 'guard_name' => 'web']);
 
+            // Leave roles someone may have customised alone, but Platform admin
+            // always has everything, including permissions added since.
             if ($role->exists) {
+                $role->isProtected() && $role->givePermissionTo($permissions->values()->all());
+
                 continue;
             }
 

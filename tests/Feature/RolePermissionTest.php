@@ -36,7 +36,7 @@ class RolePermissionTest extends TestCase
         $this->assertSame([Role::SUPER_ADMIN, 'Viewer'], Role::orderBy('id')->pluck('name')->all());
         $this->assertSame($this->catalogSize(), Permission::count());
         $this->assertEqualsCanonicalizing(
-            ['Dashboard', 'Users', 'Roles', 'Permissions', 'Activity Log', 'System Settings'],
+            ['Dashboard', 'Users', 'Roles', 'Permissions', 'Activity Log', 'Venues', 'System Settings'],
             Permission::modules()->all(),
         );
 
@@ -47,6 +47,13 @@ class RolePermissionTest extends TestCase
         $this->assertTrue(Role::findByName(Role::SUPER_ADMIN)->hasPermissionTo('settings.update'));
         $this->assertTrue(Role::findByName('Viewer')->hasPermissionTo('users.view'));
         $this->assertFalse(Role::findByName('Viewer')->hasPermissionTo('users.delete'));
+
+        // Re-running adds new permissions to Platform admin, but leaves customised roles alone.
+        Role::findByName(Role::SUPER_ADMIN)->revokePermissionTo('venues.import');
+        Role::findByName('Viewer')->revokePermissionTo('venues.view');
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->assertTrue(Role::findByName(Role::SUPER_ADMIN)->fresh()->hasPermissionTo('venues.import'));
+        $this->assertFalse(Role::findByName('Viewer')->fresh()->hasPermissionTo('venues.view'));
     }
 
     // Roles
