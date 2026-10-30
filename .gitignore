@@ -45,3 +45,4 @@ Thumbs.db
 .phpstorm.meta.php
 composer.lock
 .phpunit.result.cache
+/files

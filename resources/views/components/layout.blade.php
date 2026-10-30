@@ -6,6 +6,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ? "$title · " : '' }}{{ config('app.name') }}</title>
+    @if (config('app.logo'))
+        <link rel="icon" href="{{ asset(config('app.logo')) }}">
+    @endif
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -13,7 +16,14 @@
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
     <header class="border-b border-slate-200 bg-white">
         <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-            <a href="{{ route('home') }}" class="text-lg font-semibold text-emerald-600">🏓 {{ config('app.name') }}</a>
+            <a href="{{ route('home') }}" class="flex items-center gap-2 text-lg font-semibold text-emerald-600">
+                @if (config('app.logo'))
+                    <img src="{{ asset(config('app.logo')) }}" alt="" class="size-8 rounded-lg object-contain">
+                @else
+                    🏓
+                @endif
+                {{ config('app.name') }}
+            </a>
 
             <div class="flex items-center gap-4 text-sm font-medium">
                 @auth

@@ -1,6 +1,6 @@
 @php
     // Each item: label, compact label + icon for the tablet rail, route (null = not built yet),
-    // route patterns that mark it active, optional children, and an optional role needed to see it.
+    // route patterns that mark it active, optional children, and an optional role or permission needed to see it.
     $nav = collect([
         ['label' => 'Overview', 'short' => 'Overview', 'icon' => 'layout-grid', 'rail' => 'layout-grid', 'route' => 'dashboard', 'active' => ['dashboard']],
         ['label' => 'User & Security', 'short' => 'Security', 'icon' => 'shield-check', 'rail' => 'users', 'route' => 'admin.users.index', 'active' => ['admin.users.*', 'admin.roles.*', 'admin.permissions.*', 'admin.activity'], 'children' => [
@@ -8,9 +8,10 @@
             ['label' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'active' => ['admin.roles.*', 'admin.permissions.*']],
             ['label' => 'Activity Log', 'route' => 'admin.activity'],
         ]],
-        ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings'],
+        ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings', 'route' => 'admin.settings', 'active' => ['admin.settings*'], 'can' => 'settings.view'],
         ['label' => 'Database', 'short' => 'Database', 'icon' => 'database', 'rail' => 'database', 'route' => 'admin.database', 'active' => ['admin.database*'], 'role' => \App\Models\Role::SUPER_ADMIN],
-    ])->filter(fn (array $item) => ! isset($item['role']) || auth()->user()?->hasRole($item['role']));
+    ])->filter(fn (array $item) => (! isset($item['role']) || auth()->user()?->hasRole($item['role']))
+        && (! isset($item['can']) || auth()->user()?->can($item['can'])));
 
     $href = fn (array $item) => isset($item['route']) ? route($item['route']) : '#';
     $isActive = fn (array $item) => isset($item['active']) && request()->routeIs(...$item['active']);
@@ -34,11 +35,9 @@
     class="fixed inset-y-0 left-0 z-50 flex w-60 -translate-x-full flex-col overflow-hidden bg-ink-950 text-slate-200 transition-[translate,width] duration-300 ease-in-out lg:translate-x-0 lg:collapsed:w-20"
 >
     <div class="flex h-14 shrink-0 items-center justify-between border-b border-white/15 px-5">
-        <a href="{{ route('dashboard') }}" class="group flex items-center gap-3" title="{{ config('app.name') }}">
+        <a href="{{ route('dashboard') }}" class="group flex min-w-0 items-center gap-3" title="{{ config('app.name') }}">
             <x-admin.brand-mark class="size-8 transition group-hover:rotate-12" />
-            <span class="text-lg leading-none font-extrabold tracking-tight whitespace-nowrap text-white transition-opacity duration-200 lg:collapsed:opacity-0">
-                Pickle<span class="bg-linear-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">Ball</span>
-            </span>
+            <x-admin.brand-name class="truncate text-lg leading-none font-extrabold tracking-tight whitespace-nowrap text-white transition-opacity duration-200 lg:collapsed:opacity-0" />
         </a>
         <button type="button" @click="sidebarOpen = false" class="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 lg:hidden" aria-label="Close menu">
             <x-icon name="x" />
@@ -82,7 +81,7 @@
 <aside class="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col bg-ink-950 text-slate-200 md:flex lg:hidden">
     <a href="{{ route('dashboard') }}" class="flex h-14 shrink-0 flex-col items-center justify-center gap-1 border-b border-white/15">
         <x-admin.brand-mark class="size-7" />
-        <span class="text-xs leading-none font-extrabold tracking-tight text-white">Pickle<span class="text-brand-400">Ball</span></span>
+        <x-admin.brand-name accent="text-brand-400" class="max-w-full truncate px-1 text-xs leading-none font-extrabold tracking-tight text-white" />
     </a>
 
     <nav id="rail-nav" data-swap class="flex-1 space-y-1 overflow-y-auto px-2 py-3">

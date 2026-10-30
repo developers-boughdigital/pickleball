@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\DatabaseController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
@@ -34,6 +35,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('roles', RoleController::class)->except('show');
         Route::resource('permissions', PermissionController::class)->except('show');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
+
+        Route::get('settings', [SettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings');
+        Route::put('settings', [SettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
 
         Route::middleware('role:'.Role::SUPER_ADMIN)->controller(DatabaseController::class)->group(function () {
             Route::get('database', 'index')->name('database');

@@ -13,6 +13,37 @@ const slug = (value) =>
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
+export const settingsForm = ({ name, logo }) => ({
+    dirty: false,
+    name: name ?? '',
+    logo, // current logo URL, or null for the built-in mark
+    removeLogo: false,
+    showSecret: false,
+    copied: false,
+
+    pickLogo(event) {
+        const [file] = event.target.files;
+        if (!file) return;
+
+        URL.revokeObjectURL(this.logo);
+        this.logo = URL.createObjectURL(file);
+        this.removeLogo = false;
+    },
+
+    clearLogo() {
+        this.logo = null;
+        this.removeLogo = true;
+        this.$refs.logo.value = '';
+        this.dirty = true;
+    },
+
+    async copy(text) {
+        await navigator.clipboard?.writeText(text);
+        this.copied = true;
+        setTimeout(() => (this.copied = false), 1500);
+    },
+});
+
 export const userForm = ({ name, email }) => ({
     dirty: false,
     name: name ?? '',
