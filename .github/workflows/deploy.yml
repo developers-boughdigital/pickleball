@@ -11,24 +11,38 @@ jobs:
   deploy:
     name: Upload files to hosting
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+
           protocol: ftps
           port: 21
+          security: strict
+
           local-dir: ./
           server-dir: /
+
+          timeout: 60000
+          log-level: verbose
+
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
+            **/.env
+            **/.env.*
+            !**/.env.example
             .github/**
             .gitignore
+            **/vendor/**
+            **/tests/**
+            **/.ftp-deploy-sync-state.json
