@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('home'))->name('home');
 
-Route::middleware('guest')->group(function () {
+// no_store keeps browsers from restoring these forms from history with an old CSRF token.
+Route::middleware(['guest', 'cache.headers:no_store;private'])->group(function () {
     Route::get('register', [RegisterController::class, 'create'])->name('register');
     Route::post('register', [RegisterController::class, 'store']);
 

@@ -39,4 +39,45 @@ class LoginTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_login_page_is_never_cached(): void
+    {
+        $this->assertStringContainsString('no-store', $this->get('/login')->headers->get('Cache-Control'));
+    }
+
+    public function test_an_expired_login_form_goes_back_with_a_message_instead_of_419(): void
+    {
+        $this->checkCsrfTokens();
+
+        $this->from('/login')->post('/login', ['email' => 'sam@example.com', 'password' => 'secret', '_token' => 'stale'])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors(['email' => 'The page had expired, so please try again.'])
+            ->assertSessionHasInput('email', 'sam@example.com')
+            ->assertSessionMissing('_old_input.password');
+
+        $this->assertGuest();
+    }
+
+    public function test_an_expired_login_form_sent_after_signing_in_goes_to_the_dashboard(): void
+    {
+        $this->checkCsrfTokens();
+
+        // e.g. the form was submitted twice: the first one already signed in.
+        $this->actingAs(User::factory()->create())
+            ->post('/login', ['_token' => 'stale'])
+            ->assertRedirect('/dashboard');
+
+        // Logging out with an old token once already signed out just goes home.
+        auth()->logout();
+        $this->post('/logout', ['_token' => 'stale'])->assertRedirect('/');
+
+        // Other forms still get the normal 419.
+        $this->actingAs(User::factory()->create())->put('/admin/settings', ['_token' => 'stale'])->assertStatus(419);
+    }
+
+    /** CSRF checks are skipped while running tests; switch them back on. */
+    private function checkCsrfTokens(): void
+    {
+        $this->app->instance('env', 'local');
+    }
 }
