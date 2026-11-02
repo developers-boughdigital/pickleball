@@ -22,21 +22,27 @@ class VenueTest extends TestCase
 
     private array $form = [
         'name' => 'Pickledome',
-        'venue_type' => 'Commercial indoor',
-        'address' => '56 Coyne Street',
+        'name_needs_confirming' => '0',
+        'venue_type' => 'commercial_indoor',
+        'street_address' => '56 Coyne Street',
         'suburb' => 'Fadden',
         'postcode' => '2904',
         'state' => 'ACT',
         'latitude' => '-35.410446',
         'longitude' => '149.129444',
         'court_count' => '11',
-        'indoor_outdoor' => 'Indoor',
-        'surface' => 'Sprung timber',
+        'indoor_outdoor' => 'indoor',
+        'surface' => 'sprung_timber',
         'lights' => '1',
-        'facilities' => ['toilets' => '1', 'parking' => '0', 'covered' => ''],
+        'toilets' => '1',
+        'parking' => '0',
+        'covered' => '',
+        'court_hire' => '13.50',
         'website' => 'https://pickledome.example.com',
-        'club_codes' => 'c0001, C0002',
-        'status' => 'Open',
+        'record_status' => 'to_check',
+        'claim_status' => 'not_contacted',
+        'profile_tier' => '1',
+        'status' => 'draft',
     ];
 
     protected function setUp(): void
@@ -58,36 +64,34 @@ class VenueTest extends TestCase
     }
 
     /** Write rows to a temporary spreadsheet and wrap it as an upload. */
-    private function spreadsheet(array $rows, string $format = 'xlsx', string $sheet = 'Venues'): UploadedFile
+    private function spreadsheet(array $rows, string $format = 'csv'): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'venues').".{$format}";
         $writer = $format === 'csv' ? new CsvWriter : new XlsxWriter;
         $writer->openToFile($path);
-        if ($writer instanceof XlsxWriter) {
-            $writer->getCurrentSheet()->setName($sheet);
-        }
         foreach ($rows as $row) {
             $writer->addRow(Row::fromValues($row));
         }
         $writer->close();
 
-        return new UploadedFile($path, "directory.{$format}", null, null, true);
+        return new UploadedFile($path, "venues.{$format}", null, null, true);
     }
 
+    /** venues.csv's header row (without the export-only status column). */
     private function headers(): array
     {
-        return array_keys(VenueSpreadsheet::COLUMNS);
+        return array_slice(VenueSpreadsheet::COLUMNS, 0, -1);
     }
 
-    /** A row keyed by header, filled into the full column order. */
+    /** A row keyed by column, filled into the full column order. */
     private function row(array $values): array
     {
-        return array_map(fn ($header) => $values[$header] ?? null, $this->headers());
+        return array_map(fn ($header) => $values[$header] ?? '', $this->headers());
     }
 
     public function test_permissions(): void
     {
-        $venue = Venue::create(['name' => 'Pickledome', 'status' => 'Open']);
+        $venue = Venue::create(['name' => 'Pickledome']);
 
         $this->signInAs('Viewer');
         $this->get('/admin/venues')->assertOk()->assertSee('Pickledome')->assertDontSee('Add venue')->assertDontSee(route('admin.venues.export'));
@@ -104,6 +108,17 @@ class VenueTest extends TestCase
         $this->get('/dashboard')->assertDontSee(route('admin.venues.index'));
     }
 
+    public function test_new_venues_are_drafts_to_check(): void
+    {
+        $venue = Venue::create(['name' => 'Pickledome'])->fresh();
+
+        $this->assertSame('V0001', $venue->ref);
+        $this->assertSame('draft', $venue->status);
+        $this->assertSame('to_check', $venue->record_status);
+        $this->assertSame('not_contacted', $venue->claim_status);
+        $this->assertFalse($venue->name_needs_confirming);
+    }
+
     public function test_adding_a_venue(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
@@ -113,48 +128,70 @@ class VenueTest extends TestCase
         $this->post('/admin/venues', $this->form)->assertRedirect('/admin/venues/pickledome');
 
         $venue = Venue::firstWhere('name', 'Pickledome');
-        $this->assertSame('V0001', $venue->code);
+        $this->assertSame('V0001', $venue->ref);
         $this->assertSame(11, $venue->court_count);
+        $this->assertSame(1350, $venue->court_hire_cents);
         $this->assertTrue($venue->lights);
-        $this->assertTrue($venue->facility('toilets'));
-        $this->assertFalse($venue->facility('parking'));
-        $this->assertNull($venue->facility('covered'));
-        $this->assertSame(['C0001', 'C0002'], $venue->clubCodes());
+        $this->assertTrue($venue->toilets);
+        $this->assertFalse($venue->parking);
+        $this->assertNull($venue->covered);
+        $this->assertSame('draft', $venue->status);
         $this->assertTrue(ActivityLog::where('action', 'venue.created')->where('subject_id', $venue->id)->exists());
 
-        $this->get('/admin/venues/pickledome')->assertOk()->assertSee('56 Coyne Street, Fadden, ACT 2904')->assertSee('pickledome.example.com');
+        $this->get('/admin/venues/pickledome')->assertOk()
+            ->assertSee('56 Coyne Street, Fadden, ACT 2904')
+            ->assertSee('Commercial indoor')
+            ->assertSee('$13.50');
 
-        // Same name again gets its own slug and the next ID.
+        // Same name again gets its own slug and the next ref.
         $this->post('/admin/venues', $this->form)->assertRedirect('/admin/venues/pickledome-2');
-        $this->assertSame('V0002', Venue::firstWhere('slug', 'pickledome-2')->code);
+        $this->assertSame('V0002', Venue::firstWhere('slug', 'pickledome-2')->ref);
     }
 
-    public function test_validation_uses_the_spreadsheet_lists(): void
+    public function test_validation_uses_the_pack_codes(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
 
-        $this->post('/admin/venues', [...$this->form, 'state' => 'XX', 'surface' => 'Lava', 'postcode' => '29', 'website' => 'javascript:alert(1)', 'status' => ''])
-            ->assertSessionHasErrors(['state', 'surface', 'postcode', 'website', 'status']);
+        $this->post('/admin/venues', [...$this->form, 'state' => 'XX', 'surface' => 'Lava', 'postcode' => '29', 'website' => 'javascript:alert(1)', 'record_status' => 'maybe'])
+            ->assertSessionHasErrors(['state', 'surface', 'postcode', 'website', 'record_status']);
 
         $this->assertSame(0, Venue::count());
     }
 
-    public function test_editing_and_deleting_a_venue(): void
+    public function test_only_checked_venues_can_be_published(): void
+    {
+        $this->signInAs(Role::SUPER_ADMIN);
+
+        $this->post('/admin/venues', [...$this->form, 'status' => 'published'])
+            ->assertSessionHasErrors(['status' => 'Only venues with record status “Checked” can be published.']);
+
+        $this->post('/admin/venues', [...$this->form, 'record_status' => 'checked', 'status' => 'published']);
+        $venue = Venue::firstWhere('name', 'Pickledome');
+        $this->assertSame('published', $venue->status);
+
+        // Marking it for follow-up takes it off the directory again.
+        $venue->update(['record_status' => 'needs_follow_up']);
+        $this->assertSame('draft', $venue->fresh()->status);
+    }
+
+    public function test_editing_keeps_the_slug_and_deleting(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
         $this->post('/admin/venues', $this->form);
         $venue = Venue::firstWhere('name', 'Pickledome');
 
-        $this->put(route('admin.venues.update', $venue), [...$this->form, 'court_count' => '12', 'facilities' => ['parking' => '1'], 'status' => 'Closed'])
-            ->assertRedirect(route('admin.venues.show', $venue));
+        $this->get(route('admin.venues.edit', $venue))->assertOk()->assertSee('value="13.50"', false)->assertSee('/pickledome');
+
+        $this->put(route('admin.venues.update', $venue), [...$this->form, 'name' => 'The Pickledome', 'court_count' => '12', 'parking' => '1', 'toilets' => ''])
+            ->assertRedirect('/admin/venues/pickledome');
 
         $venue->refresh();
+        $this->assertSame('The Pickledome', $venue->name);
+        $this->assertSame('pickledome', $venue->slug);
         $this->assertSame(12, $venue->court_count);
-        $this->assertTrue($venue->facility('parking'));
-        $this->assertSame('Closed', $venue->status);
-        $this->assertNull($venue->facility('toilets'));
-        $changes = ActivityLog::firstWhere('action', 'venue.updated')->changes;
-        $this->assertEquals(['from' => 11, 'to' => 12], $changes['court_count']);
+        $this->assertTrue($venue->parking);
+        $this->assertNull($venue->toilets);
+        $this->assertEquals(['from' => 11, 'to' => 12], ActivityLog::firstWhere('action', 'venue.updated')->changes['court_count']);
 
         $this->delete(route('admin.venues.destroy', $venue))->assertRedirect('/admin/venues');
         $this->assertSoftDeleted($venue);
@@ -162,85 +199,94 @@ class VenueTest extends TestCase
 
     public function test_search_and_filters(): void
     {
-        Venue::create(['name' => 'Pickledome', 'suburb' => 'Fadden', 'state' => 'ACT', 'indoor_outdoor' => 'Indoor', 'status' => 'Open']);
-        Venue::create(['name' => 'Darwin Waterfront', 'suburb' => 'Darwin City', 'state' => 'NT', 'indoor_outdoor' => 'Outdoor', 'status' => 'Closed']);
+        Venue::create(['name' => 'Pickledome', 'suburb' => 'Fadden', 'state' => 'ACT', 'indoor_outdoor' => 'indoor', 'record_status' => 'checked', 'status' => 'published']);
+        Venue::create(['name' => 'Darwin Waterfront', 'suburb' => 'Darwin City', 'state' => 'NT', 'indoor_outdoor' => 'outdoor', 'name_needs_confirming' => true]);
         $this->signInAs('Viewer');
 
+        $this->get('/admin/venues')->assertSeeInOrder(['Pickledome', 'Darwin Waterfront', 'Name to confirm']);
         $this->get('/admin/venues?search=fadden')->assertSee('Pickledome')->assertDontSee('Darwin Waterfront');
         $this->get('/admin/venues?state=NT')->assertSee('Darwin Waterfront')->assertDontSee('Pickledome');
-        $this->get('/admin/venues?setting=Indoor&status=Open')->assertSee('Pickledome')->assertDontSee('Darwin Waterfront');
+        $this->get('/admin/venues?setting=indoor&record_status=checked')->assertSee('Pickledome')->assertDontSee('Darwin Waterfront');
+        $this->get('/admin/venues?status=draft')->assertSee('Darwin Waterfront')->assertDontSee('Pickledome');
     }
 
-    public function test_importing_the_directory_spreadsheet(): void
+    public function test_importing_the_pack(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
 
         $file = $this->spreadsheet([
             $this->headers(),
-            $this->row(['Venue ID' => 'EXAMPLE', 'Venue name' => 'Example Reserve']),
-            $this->row(['Venue ID' => 'V0001', 'Venue name' => 'Pickledome', 'Suburb' => 'Fadden', 'Postcode' => '2904', 'State' => 'act', 'Number of courts' => 11, 'Indoor/outdoor' => 'indoor', 'Lights' => 'Yes', 'Toilets' => 'No', 'Parking' => 'Unknown', 'Clubs that play here' => 'C0001', 'Date checked' => '21/10/2026', 'Status' => 'closed']),
-            $this->row(['Venue ID' => 'V0002', 'Venue name' => 'Darwin Waterfront', 'Postcode' => 800, 'State' => 'NT', 'Website' => 'www.waterfront.nt.gov.au', 'Phone' => '(08) 8999 5155', 'Latitude' => -12.4673, 'Longitude' => 130.8456]),
-            $this->row(['Venue ID' => 'V0003', 'Venue name' => 'Bad Row', 'State' => 'Queensland', 'Lights' => 'Maybe']),
-            $this->row(['Venue ID' => 'V0004']), // pre-filled ID, nothing else yet
+            $this->row(['ref' => 'V0001', 'slug' => 'pickledome', 'name' => 'Pickledome', 'name_needs_confirming' => '0', 'venue_type' => 'commercial_indoor', 'suburb' => 'Fadden', 'postcode' => '2904', 'state' => 'ACT', 'court_count' => '11', 'indoor_outdoor' => 'indoor', 'lights' => '1', 'toilets' => '0', 'court_hire_cents' => '1300', 'record_status' => 'checked', 'checked_at' => '2026-11-01', 'profile_tier' => '2', 'claim_status' => 'not_contacted', 'source_url' => 'https://www.pickleballact.org/']),
+            $this->row(['ref' => 'V0004', 'slug' => 'darwin-waterfront', 'name' => 'Darwin Waterfront', 'name_needs_confirming' => '1', 'postcode' => '0800', 'state' => 'NT', 'indoor_outdoor' => 'outdoor', 'website' => 'www.waterfront.nt.gov.au', 'phone' => '(08) 8999 5155', 'latitude' => '-12.469109', 'longitude' => '130.84438', 'record_status' => 'to_check', 'source_url' => 'Client file: Places_to_Play.xlsx']),
+            $this->row(['ref' => 'V0005', 'name' => 'Bad Row', 'state' => 'Queensland', 'lights' => 'Maybe', 'record_status' => 'to_check']),
+            $this->row(['ref' => 'V0006']), // nothing but a ref
         ]);
 
         $this->post('/admin/venues/import', ['file' => $file])
             ->assertRedirect('/admin/venues')
-            ->assertSessionHas('import', fn ($result) => $result['created'] === 2 && $result['updated'] === 0 && $result['skipped'] === 2 && count($result['errors']) === 1
-                && str_contains($result['errors'][0], 'Row 5 (V0003)') && str_contains($result['errors'][0], 'State') && str_contains($result['errors'][0], 'Lights'));
+            ->assertSessionHas('import', fn ($result) => $result['created'] === 2 && $result['updated'] === 0 && $result['skipped'] === 1 && count($result['errors']) === 1
+                && str_contains($result['errors'][0], 'Row 4 (V0005)') && str_contains($result['errors'][0], 'State') && str_contains($result['errors'][0], 'Lights'));
 
-        $dome = Venue::firstWhere('code', 'V0001');
-        $this->assertSame('ACT', $dome->state);
-        $this->assertSame('Indoor', $dome->indoor_outdoor);
+        $dome = Venue::firstWhere('ref', 'V0001');
+        $this->assertSame('pickledome', $dome->slug);
+        $this->assertSame('commercial_indoor', $dome->venue_type);
         $this->assertTrue($dome->lights);
-        $this->assertFalse($dome->facility('toilets'));
-        $this->assertNull($dome->facility('parking'));
-        $this->assertSame('2026-10-21', $dome->checked_at->format('Y-m-d'));
-        $this->assertSame('Closed', $dome->status);
-        $this->assertSame(['C0001'], $dome->clubCodes());
+        $this->assertFalse($dome->toilets);
+        $this->assertNull($dome->parking);
+        $this->assertSame(1300, $dome->court_hire_cents);
+        $this->assertSame('checked', $dome->record_status);
+        $this->assertSame('draft', $dome->status);
+        $this->assertSame(2, $dome->profile_tier);
+        $this->assertSame('2026-11-01', $dome->checked_at->format('Y-m-d'));
 
-        $darwin = Venue::firstWhere('code', 'V0002');
+        $darwin = Venue::firstWhere('ref', 'V0004');
         $this->assertSame('0800', $darwin->postcode);
+        $this->assertTrue($darwin->name_needs_confirming);
         $this->assertSame('https://www.waterfront.nt.gov.au', $darwin->website);
-        $this->assertSame('Open', $darwin->status);
-        $this->assertEqualsWithDelta(-12.4673, $darwin->latitude, 0.00001);
+        $this->assertSame('Client file: Places_to_Play.xlsx', $darwin->source_url);
+        $this->assertEqualsWithDelta(-12.469109, $darwin->latitude, 0.000001);
 
         $this->assertFalse(ActivityLog::firstWhere('action', 'venue.imported')->succeeded);
+        $this->assertSame('Import finished: 2 added, 0 updated, 1 with problems. 2 in draft; 1 checked and ready to go live.', session('status'));
     }
 
-    public function test_reimporting_updates_instead_of_duplicating(): void
+    public function test_reimporting_updates_by_ref_and_never_changes_the_slug(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
-        $existing = Venue::create(['code' => 'V0001', 'name' => 'Pickledome', 'court_count' => 8, 'website' => 'https://keep.example.com', 'status' => 'Closed']);
+        $existing = Venue::create(['ref' => 'V0001', 'name' => 'Pickledome', 'court_count' => 8, 'toilets' => true, 'website' => 'https://keep.example.com', 'record_status' => 'checked', 'status' => 'published']);
         $existing->delete();
 
-        // Only some columns: the rest are left as they were. The directory's own
-        // "Record status" column only matters when it says Closed.
+        // Only some columns: the rest are left as they were. Empty cells mean unknown.
         $file = $this->spreadsheet([
-            ['Venue ID', 'Venue name', 'Number of courts', 'Record status'],
-            ['V0001', 'Pickledome', 11, 'Checked'],
-            ['V0002', 'Darwin Waterfront', 4, 'Closed'],
-            ['V0003', 'Belconnen Community Centre', 3, 'To check'],
-        ], 'csv');
+            ['ref', 'slug', 'name', 'court_count', 'toilets', 'record_status'],
+            ['V0001', 'the-pickledome', 'The Pickledome', '11', '', 'needs_follow_up'],
+            ['V0002', 'darwin-waterfront', 'Darwin Waterfront', '', '', ''],
+        ]);
 
         $this->post('/admin/venues/import', ['file' => $file])
-            ->assertSessionHas('import', fn ($result) => $result['created'] === 2 && $result['updated'] === 1);
+            ->assertSessionHas('import', fn ($result) => $result['created'] === 1 && $result['updated'] === 1 && ! $result['errors']);
 
-        $venue = Venue::firstWhere('code', 'V0001');
-        $this->assertSame(3, Venue::withTrashed()->count());
+        $venue = Venue::firstWhere('ref', 'V0001');
+        $this->assertSame(2, Venue::withTrashed()->count());
         $this->assertFalse($venue->trashed());
+        $this->assertSame('The Pickledome', $venue->name);
+        $this->assertSame('pickledome', $venue->slug);
         $this->assertSame(11, $venue->court_count);
+        $this->assertNull($venue->toilets);
         $this->assertSame('https://keep.example.com', $venue->website);
-        $this->assertSame('Closed', $venue->status);
-        $this->assertSame('Closed', Venue::firstWhere('code', 'V0002')->status);
-        $this->assertSame('Open', Venue::firstWhere('code', 'V0003')->status);
+        // No longer checked, so it can't stay published.
+        $this->assertSame('draft', $venue->status);
+
+        $new = Venue::firstWhere('ref', 'V0002');
+        $this->assertSame('darwin-waterfront', $new->slug);
+        $this->assertSame(['to_check', 'draft'], [$new->record_status, $new->status]);
     }
 
     public function test_import_rejects_files_without_the_headers(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
 
-        $this->post('/admin/venues/import', ['file' => $this->spreadsheet([['Name', 'Town'], ['Pickledome', 'Fadden']])])
+        $this->post('/admin/venues/import', ['file' => $this->spreadsheet([['Title', 'Town'], ['Pickledome', 'Fadden']])])
             ->assertSessionHasErrors('file');
         $this->post('/admin/venues/import', ['file' => UploadedFile::fake()->create('venues.pdf', 10)])
             ->assertSessionHasErrors('file');
@@ -252,7 +298,7 @@ class VenueTest extends TestCase
     {
         $this->signInAs(Role::SUPER_ADMIN);
         $this->post('/admin/venues', $this->form);
-        Venue::create(['name' => 'Darwin Waterfront', 'state' => 'NT', 'status' => 'Closed']);
+        Venue::create(['name' => 'Darwin Waterfront', 'state' => 'NT', 'record_status' => 'checked', 'status' => 'published']);
 
         $response = $this->get('/admin/venues/export?format=xlsx');
         $response->assertOk()->assertDownload('venues-'.now()->format('Y-m-d').'.xlsx');
@@ -269,12 +315,14 @@ class VenueTest extends TestCase
         }
         $reader->close();
 
-        $this->assertSame($this->headers(), $rows[0]);
-        $dome = array_combine($this->headers(), array_pad($rows[1], count($this->headers()), ''));
-        $this->assertSame('V0001', $dome['Venue ID']);
-        $this->assertSame('Yes', $dome['Lights']);
-        $this->assertSame('No', $dome['Parking']);
-        $this->assertSame('C0001, C0002', $dome['Clubs that play here']);
+        $this->assertSame(VenueSpreadsheet::COLUMNS, $rows[0]);
+        $dome = array_combine(VenueSpreadsheet::COLUMNS, array_pad($rows[1], count(VenueSpreadsheet::COLUMNS), ''));
+        $this->assertSame('V0001', $dome['ref']);
+        $this->assertEquals(1, $dome['lights']);
+        $this->assertEquals(0, $dome['parking']);
+        $this->assertSame('', $dome['covered']);
+        $this->assertEquals(1350, $dome['court_hire_cents']);
+        $this->assertSame('sprung_timber', $dome['surface']);
         $this->assertCount(3, $rows);
         $this->assertTrue(ActivityLog::where('action', 'venue.exported')->exists());
 
@@ -282,14 +330,15 @@ class VenueTest extends TestCase
         $this->post('/admin/venues/import', ['file' => new UploadedFile($path, 'venues.xlsx', null, null, true)])
             ->assertSessionHas('import', fn ($result) => $result['created'] === 0 && $result['updated'] === 2 && ! $result['errors']);
         $this->assertSame(2, Venue::count());
-        $this->assertSame(['C0001', 'C0002'], Venue::firstWhere('code', 'V0001')->clubCodes());
+        $this->assertSame('published', Venue::firstWhere('ref', 'V0002')->status);
+        $this->assertNull(Venue::firstWhere('ref', 'V0001')->covered);
     }
 
     public function test_csv_export_follows_filters_and_template_is_empty(): void
     {
         $this->signInAs(Role::SUPER_ADMIN);
-        Venue::create(['name' => 'Pickledome', 'state' => 'ACT', 'status' => 'Open']);
-        Venue::create(['name' => 'Darwin Waterfront', 'state' => 'NT', 'status' => 'Closed']);
+        Venue::create(['name' => 'Pickledome', 'state' => 'ACT']);
+        Venue::create(['name' => 'Darwin Waterfront', 'state' => 'NT']);
 
         $csv = $this->get('/admin/venues/export?format=csv&state=NT')->streamedContent();
         $this->assertStringContainsString('Darwin Waterfront', $csv);
@@ -297,6 +346,6 @@ class VenueTest extends TestCase
 
         $template = $this->get('/admin/venues/export?format=csv&template=1')->streamedContent();
         $this->assertCount(1, array_filter(explode("\n", trim($template))));
-        $this->assertStringStartsWith('"Venue ID"', ltrim($template, "\xEF\xBB\xBF"));
+        $this->assertStringStartsWith('ref,slug,name,', ltrim($template, "\xEF\xBB\xBF"));
     }
 }

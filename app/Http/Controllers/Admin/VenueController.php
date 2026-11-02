@@ -40,22 +40,22 @@ class VenueController extends Controller implements HasMiddleware
             'filters' => $filters,
             'stats' => [
                 'total' => Venue::count(),
-                'open' => Venue::where('status', 'Open')->count(),
-                'closed' => Venue::where('status', 'Closed')->count(),
-                'courts' => (int) Venue::sum('court_count'),
                 'states' => Venue::distinct()->count('state'),
+                'published' => Venue::where('status', 'published')->count(),
+                'ready' => Venue::where('record_status', 'checked')->where('status', 'draft')->count(),
+                'confirmName' => Venue::where('name_needs_confirming', true)->count(),
             ],
         ]);
     }
 
     public function create(): View
     {
-        return view('admin.venues.form', ['venue' => new Venue(['status' => 'Open','code' => Venue::nextCode()])]);
+        return view('admin.venues.form', ['venue' => new Venue(['ref' => Venue::nextRef()])]);
     }
 
     public function store(VenueRequest $request): RedirectResponse
     {
-        $venue = (new Venue)->fillFromForm($request->validated());
+        $venue = new Venue($request->validated());
         $venue->save();
 
         ActivityLog::record('venue.created', "Added venue {$venue->name}", $venue, $venue->name);
@@ -75,8 +75,8 @@ class VenueController extends Controller implements HasMiddleware
 
     public function update(VenueRequest $request, Venue $venue): RedirectResponse
     {
-        $venue->fillFromForm($request->validated());
-        $changes = ActivityLog::diff($venue, [...array_keys(VenueRequest::fields()), 'attributes']);
+        $venue->fill($request->validated());
+        $changes = ActivityLog::diff($venue, array_keys(VenueRequest::fields()));
         $venue->save();
 
         if ($changes) {
@@ -113,6 +113,7 @@ class VenueController extends Controller implements HasMiddleware
         if ($result['errors']) {
             $summary .= ', '.count($result['errors']).' with problems';
         }
+        $summary .= ". {$result['drafts']} in draft; {$result['checked']} checked and ready to go live";
 
         ActivityLog::record('venue.imported', "Imported venues from {$file->getClientOriginalName()}: {$summary}", succeeded: ! $result['errors'], changes: [
             'file' => ['from' => null, 'to' => $file->getClientOriginalName()],
@@ -150,14 +151,15 @@ class VenueController extends Controller implements HasMiddleware
         );
     }
 
-    /** @return array{search: ?string, state: ?string, status: ?string, setting: ?string} */
+    /** @return array{search: ?string, state: ?string, record_status: ?string, status: ?string, setting: ?string} */
     private function filters(Request $request): array
     {
         return [
             'search' => $request->string('search')->trim()->value() ?: null,
             'state' => in_array($request->query('state'), Venue::STATES) ? $request->query('state') : null,
-            'status' => in_array($request->query('status'), Venue::STATUSES) ? $request->query('status') : null,
-            'setting' => in_array($request->query('setting'), Venue::SETTINGS) ? $request->query('setting') : null,
+            'record_status' => array_key_exists((string) $request->query('record_status'), Venue::RECORD_STATUSES) ? $request->query('record_status') : null,
+            'status' => array_key_exists((string) $request->query('status'), Venue::STATUSES) ? $request->query('status') : null,
+            'setting' => array_key_exists((string) $request->query('setting'), Venue::SETTINGS) ? $request->query('setting') : null,
         ];
     }
 
@@ -167,6 +169,7 @@ class VenueController extends Controller implements HasMiddleware
         return Venue::query()
             ->search($filters['search'])
             ->when($filters['state'], fn (Builder $query, string $state) => $query->where('state', $state))
+            ->when($filters['record_status'], fn (Builder $query, string $status) => $query->where('record_status', $status))
             ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['setting'], fn (Builder $query, string $setting) => $query->where('indoor_outdoor', $setting));
     }

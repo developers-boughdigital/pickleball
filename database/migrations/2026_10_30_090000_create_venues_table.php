@@ -5,12 +5,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Follows the venues table in pickleball_db2.pdf, with these differences:
+ * Columns follow venues.csv from the directory import pack (see files/IMPORT_GUIDE.md),
+ * so a re-import matches field for field. Differences from pickleball_db2.pdf:
  * - latitude/longitude instead of location geography(point) (PostGIS isn't installed)
- * - indoor_outdoor instead of indoor boolean, because the directory also has "Both"
- * - opening_hours as text instead of hours json; the directory records it as free text
- * - code keeps the directory's Venue ID (V0001) so re-imports update the same row
- * - the directory's verification columns (source, checked by/at, notes)
+ * - indoor_outdoor (indoor, outdoor, both) instead of an indoor boolean
+ * - each facility is its own nullable boolean: NULL means unknown
+ * - ref keeps the directory's ID (V0001); imports match on it
+ * - status is the publishing state (draft/published); record_status is the VA's check
  */
 return new class extends Migration
 {
@@ -18,12 +19,13 @@ return new class extends Migration
     {
         Schema::create('venues', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('code', 20)->nullable()->unique();
+            $table->string('ref', 20)->nullable()->unique();
             $table->string('slug')->unique();
             $table->string('name');
-            $table->string('venue_type')->nullable();
+            $table->boolean('name_needs_confirming')->default(false);
+            $table->string('venue_type', 30)->nullable();
 
-            $table->string('address')->nullable();
+            $table->string('street_address')->nullable();
             $table->string('suburb')->nullable();
             $table->string('postcode', 10)->nullable();
             $table->string('council')->nullable();
@@ -35,26 +37,34 @@ return new class extends Migration
 
             $table->unsignedSmallInteger('court_count')->nullable();
             $table->string('indoor_outdoor', 10)->nullable();
-            $table->string('surface')->nullable();
-            $table->string('court_lines')->nullable();
-            $table->boolean('lights')->nullable();
-            // covered, nets_provided, free_to_use, booking_required, accessible, toilets, parking, club_codes
-            $table->json('attributes')->nullable();
+            $table->string('surface', 30)->nullable();
+            $table->string('court_lines', 40)->nullable();
+            foreach (['nets', 'lights', 'covered', 'nets_provided', 'free_to_use'] as $facility) {
+                $table->boolean($facility)->nullable();
+            }
 
-            $table->decimal('price_per_hour', 8, 2)->nullable();
+            $table->unsignedInteger('court_hire_cents')->nullable();
             $table->text('price_notes')->nullable();
+            $table->boolean('booking_required')->nullable();
             $table->string('booking_url')->nullable();
-            $table->string('opening_hours')->nullable();
+            $table->text('opening_hours_text')->nullable();
+            foreach (['accessible', 'toilets', 'parking', 'changing_rooms', 'cafe_kiosk', 'paddle_hire'] as $facility) {
+                $table->boolean($facility)->nullable();
+            }
             $table->string('website')->nullable();
             $table->string('phone', 30)->nullable();
             $table->json('photos')->nullable();
 
             $table->string('source_type')->nullable();
-            $table->string('source_url')->nullable();
+            $table->string('source_url', 500)->nullable();
+            $table->string('record_status', 20)->default('to_check')->index();
             $table->date('checked_at')->nullable();
-            $table->string('checked_by')->nullable();
-            $table->string('status', 20)->default('To check')->index();
+            $table->string('checked_by', 100)->nullable();
+            $table->unsignedTinyInteger('profile_tier')->default(1);
+            $table->string('claim_status', 20)->default('not_contacted');
+            $table->date('enriched_at')->nullable();
             $table->text('notes')->nullable();
+            $table->string('status', 20)->default('draft')->index();
 
             $table->timestamps();
             $table->softDeletes();

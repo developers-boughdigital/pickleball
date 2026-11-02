@@ -3,6 +3,8 @@
 
     $editing = $venue->exists;
     $value = fn (string $field) => old($field, $venue->getAttribute($field));
+    $date = fn (string $field) => old($field, $venue->getAttribute($field)?->format('Y-m-d'));
+    $courtHire = old('court_hire', $venue->court_hire_cents === null ? null : number_format($venue->court_hire_cents / 100, 2, '.', ''));
 @endphp
 
 <x-admin.layout :title="$editing ? 'Edit '.$venue->name : 'Add venue'" :breadcrumb="['Venues', $editing ? $venue->name : 'Add venue']">
@@ -13,9 +15,7 @@
     <form
         method="POST"
         action="{{ $editing ? route('admin.venues.update', $venue) : route('admin.venues.store') }}"
-        x-data="{ dirty: false, name: @js($value('name') ?? '') }"
-        @input="dirty = true"
-        @change="dirty = true"
+        x-data="{ name: @js($value('name') ?? ''), recordStatus: @js($value('record_status')) }"
         class="mt-3 space-y-3"
     >
         @csrf
@@ -25,7 +25,13 @@
 
         <x-admin.form-heading icon="map-pin">
             <h1 class="truncate text-xl font-bold tracking-tight" x-text="name || 'New venue'">{{ $venue->name ?: 'New venue' }}</h1>
-            <p class="truncate text-sm text-slate-500">{{ $editing ? $venue->fullAddress() : 'Fill in what you know; the rest can wait until it’s checked.' }}</p>
+            <p class="truncate text-sm text-slate-500">
+                @if ($editing)
+                    <span class="font-mono">/{{ $venue->slug }}</span> · {{ $venue->fullAddress() }}
+                @else
+                    New venues start as drafts. Fill in what you know; the rest can wait until it’s checked.
+                @endif
+            </p>
         </x-admin.form-heading>
 
         <section class="card p-4 sm:p-5">
@@ -33,9 +39,13 @@
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="sm:col-span-2">
                     <x-admin.input name="name" label="Venue name" icon="map-pin" :value="$value('name')" x-model="name" required maxlength="255" placeholder="e.g. Pickledome" />
+                    <label class="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                        <input type="hidden" name="name_needs_confirming" value="0">
+                        <input type="checkbox" name="name_needs_confirming" value="1" @checked($value('name_needs_confirming')) class="rounded border-slate-300 accent-amber-500">
+                        Name needs confirming (the map only gave the club’s name)
+                    </label>
                 </div>
-                <x-admin.input name="code" label="Venue ID" icon="tag" :value="$value('code')" maxlength="20" class="font-mono" hint="Matches the directory spreadsheet." />
-                <x-admin.field-select name="status" label="Status" :options="Venue::STATUSES" :selected="$value('status')" :placeholder="false" />
+                <x-admin.input name="ref" label="Ref" icon="tag" :value="$value('ref')" maxlength="20" class="font-mono" hint="Matches the directory import pack." />
                 <x-admin.field-select name="venue_type" label="Venue type" :options="Venue::TYPES" :selected="$value('venue_type')" />
             </div>
         </section>
@@ -44,7 +54,7 @@
             <h2 class="mb-3 text-sm font-semibold">Location</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="sm:col-span-2">
-                    <x-admin.input name="address" label="Street address" :value="$value('address')" maxlength="255" placeholder="56 Coyne Street" />
+                    <x-admin.input name="street_address" label="Street address" :value="$value('street_address')" maxlength="255" placeholder="56 Coyne Street" />
                 </div>
                 <x-admin.input name="suburb" label="Suburb" :value="$value('suburb')" maxlength="100" />
                 <div class="grid grid-cols-2 gap-3">
@@ -71,9 +81,8 @@
             </div>
 
             <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <x-admin.yes-no name="lights" label="Lights" :value="old('lights', $venue->lights)" />
                 @foreach (Venue::FACILITIES as $key => $label)
-                    <x-admin.yes-no :name="'facilities['.$key.']'" :label="$label" :value="old('facilities.'.$key, $venue->facility($key))" />
+                    <x-admin.yes-no :name="$key" :label="$label" :value="old($key, $venue->getAttribute($key))" />
                 @endforeach
             </div>
         </section>
@@ -81,8 +90,11 @@
         <section class="card p-4 sm:p-5">
             <h2 class="mb-3 text-sm font-semibold">Booking & contact</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <x-admin.input name="price_per_hour" label="Price (AUD per court hour)" type="number" step="0.01" min="0" :value="$value('price_per_hour')" placeholder="20" />
-                <x-admin.input name="opening_hours" label="Opening hours" icon="clock" :value="$value('opening_hours')" maxlength="255" placeholder="Mon–Fri 7am–10pm" />
+                <div>
+                    <x-admin.input name="court_hire" label="Court hire (AUD per hour)" type="number" step="0.01" min="0" :value="$courtHire" placeholder="13.00" />
+                    @error('court_hire_cents') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <x-admin.input name="phone" label="Phone" icon="phone" :value="$value('phone')" maxlength="30" placeholder="02 6000 0000" />
                 <div class="sm:col-span-2">
                     <x-admin.input name="price_notes" label="Price notes" :value="$value('price_notes')" maxlength="1000" placeholder="Off-peak $15 before 4pm" />
                 </div>
@@ -92,21 +104,32 @@
                 <div class="sm:col-span-2">
                     <x-admin.input name="website" label="Website" type="url" icon="globe" :value="$value('website')" maxlength="255" placeholder="https://" />
                 </div>
-                <x-admin.input name="phone" label="Phone" icon="phone" :value="$value('phone')" maxlength="30" placeholder="02 6000 0000" />
-                <x-admin.input name="club_codes" label="Clubs that play here" :value="old('club_codes', implode(', ', $venue->clubCodes()))" maxlength="255" class="font-mono" placeholder="C0001, C0002" />
+                <div class="sm:col-span-2 xl:col-span-4">
+                    <x-admin.input name="opening_hours_text" label="Opening hours" icon="clock" :value="$value('opening_hours_text')" maxlength="1000" placeholder="Mon–Fri 7am–10pm; Sat–Sun 8am–6pm" />
+                </div>
             </div>
         </section>
 
         <section class="card p-4 sm:p-5">
-            <h2 class="mb-3 text-sm font-semibold">Verification</h2>
+            <h2 class="mb-3 text-sm font-semibold">Verification & publishing</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <x-admin.field-select name="source_type" label="Source type" :options="Venue::SOURCE_TYPES" :selected="$value('source_type')" />
-                <x-admin.input name="source_url" label="Source URL" type="url" icon="globe" :value="$value('source_url')" maxlength="255" placeholder="https://" />
-                <x-admin.input name="checked_at" label="Date checked" type="date" :value="old('checked_at', $venue->checked_at?->format('Y-m-d'))" />
-                <x-admin.input name="checked_by" label="Checked by" :value="$value('checked_by')" maxlength="100" placeholder="Initials" />
+                <x-admin.field-select name="record_status" label="Record status" :options="Venue::RECORD_STATUSES" :selected="$value('record_status')" :placeholder="false" x-model="recordStatus" />
+                <div>
+                    <x-admin.field-select name="status" label="Status" :options="Venue::STATUSES" :selected="$value('status')" :placeholder="false" />
+                    <p x-show="recordStatus !== 'checked'" class="mt-1 text-xs text-slate-500">Can be published once the record status is Checked.</p>
+                </div>
+                <x-admin.field-select name="claim_status" label="Claim status" :options="Venue::CLAIM_STATUSES" :selected="$value('claim_status')" :placeholder="false" />
+                <x-admin.input name="profile_tier" label="Profile tier" type="number" min="1" max="9" :value="$value('profile_tier')" hint="1 basic, 2 enriched from the website." />
+                <x-admin.input name="source_type" label="Source type" :value="$value('source_type')" maxlength="255" placeholder="Own website" />
+                <x-admin.input name="source_url" label="Source URL" icon="globe" :value="$value('source_url')" maxlength="500" placeholder="https:// or where it came from" />
+                <div class="grid grid-cols-2 gap-3">
+                    <x-admin.input name="checked_at" label="Date checked" type="date" :value="$date('checked_at')" />
+                    <x-admin.input name="enriched_at" label="Date enriched" type="date" :value="$date('enriched_at')" />
+                </div>
+                <x-admin.input name="checked_by" label="Checked by" :value="$value('checked_by')" maxlength="100" />
                 <div class="sm:col-span-2 xl:col-span-4">
                     <label for="notes" class="mb-1 block text-sm font-medium">Notes</label>
-                    <textarea id="notes" name="notes" rows="3" maxlength="2000" class="field h-auto w-full py-2">{{ $value('notes') }}</textarea>
+                    <textarea id="notes" name="notes" rows="3" maxlength="5000" class="field h-auto w-full py-2">{{ $value('notes') }}</textarea>
                     @error('notes') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>

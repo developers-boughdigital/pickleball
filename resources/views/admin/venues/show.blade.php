@@ -14,9 +14,13 @@
         <x-admin.form-heading icon="map-pin">
             <h1 class="text-xl font-bold tracking-tight">{{ $venue->name }}</h1>
             <p class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                <span class="font-mono">{{ $venue->code }}</span>
-                <span class="{{ $venue->statusBadge() }}">{{ $venue->status }}</span>
-                @if ($venue->venue_type) <span>{{ $venue->venue_type }}</span> @endif
+                <span class="font-mono">{{ $venue->ref }}</span>
+                <span class="{{ $venue->statusBadge() }}">{{ $venue->label('status') }}</span>
+                <span class="{{ $venue->recordStatusBadge() }}">{{ $venue->label('record_status') }}</span>
+                @if ($venue->name_needs_confirming)
+                    <span class="badge-pending" title="The map only gave the club’s name for this venue">Name to confirm</span>
+                @endif
+                @if ($venue->venue_type) <span>{{ $venue->label('venue_type') }}</span> @endif
             </p>
         </x-admin.form-heading>
 
@@ -70,7 +74,7 @@
             <section class="card p-4 sm:p-5">
                 <h2 class="mb-3 text-sm font-semibold">Courts & facilities</h2>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    @foreach (['Courts' => $venue->court_count, 'Indoor/outdoor' => $venue->indoor_outdoor, 'Surface' => $venue->surface, 'Court lines' => $venue->court_lines] as $label => $text)
+                    @foreach (['Courts' => $venue->court_count, 'Indoor/outdoor' => $venue->label('indoor_outdoor'), 'Surface' => $venue->label('surface'), 'Court lines' => $venue->label('court_lines')] as $label => $text)
                         <div class="rounded-lg bg-slate-50 p-3">
                             <p class="text-xs text-slate-500">{{ $label }}</p>
                             <p class="mt-0.5 text-sm font-semibold">{{ $text ?? '—' }}</p>
@@ -79,8 +83,8 @@
                 </div>
 
                 <ul class="mt-3 flex flex-wrap gap-1.5">
-                    @foreach (['lights' => 'Lights', ...Venue::FACILITIES] as $key => $label)
-                        @php($has = $key === 'lights' ? $venue->lights : $venue->facility($key))
+                    @foreach (Venue::FACILITIES as $key => $label)
+                        @php($has = $venue->getAttribute($key))
                         <li @class([
                             'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1',
                             'bg-emerald-50 text-emerald-700 ring-emerald-200' => $has === true,
@@ -99,18 +103,17 @@
                 <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                     @php($links = ['Website' => $venue->website, 'Booking link' => $venue->booking_url])
                     @forelse ($details([
-                        'Price per court hour' => $venue->price_per_hour !== null ? '$'.number_format($venue->price_per_hour, 2) : null,
+                        'Court hire per hour' => $venue->courtHire(),
                         'Price notes' => $venue->price_notes,
-                        'Opening hours' => $venue->opening_hours,
+                        'Opening hours' => $venue->opening_hours_text,
                         'Phone' => $venue->phone,
                         ...$links,
-                        'Clubs that play here' => implode(', ', $venue->clubCodes()),
                     ]) as $label => $text)
                         <div class="flex justify-between gap-3 border-b border-slate-100 pb-2">
                             <dt class="shrink-0 text-slate-500">{{ $label }}</dt>
-                            <dd class="min-w-0 truncate text-right">
+                            <dd class="min-w-0 text-right">
                                 @if (isset($links[$label]))
-                                    <a href="{{ $text }}" target="_blank" rel="noopener" class="text-brand-600 hover:underline">{{ preg_replace('~^https?://(www\.)?~', '', rtrim($text, '/')) }}</a>
+                                    <a href="{{ $text }}" target="_blank" rel="noopener" class="block truncate text-brand-600 hover:underline">{{ preg_replace('~^https?://(www\.)?~', '', rtrim($text, '/')) }}</a>
                                 @elseif ($label === 'Phone')
                                     <a href="tel:{{ preg_replace('/[^\d+]/', '', $text) }}" class="hover:underline">{{ $text }}</a>
                                 @else
@@ -129,9 +132,13 @@
             <h2 class="mb-3 text-sm font-semibold">Verification</h2>
             <dl class="space-y-2 text-sm">
                 @foreach ([
+                    'Record status' => $venue->label('record_status'),
+                    'Claim status' => $venue->label('claim_status'),
+                    'Profile tier' => $venue->profile_tier,
                     'Source' => $venue->source_type,
                     'Date checked' => $venue->checked_at?->format('j M Y'),
                     'Checked by' => $venue->checked_by,
+                    'Date enriched' => $venue->enriched_at?->format('j M Y'),
                     'Last updated' => $venue->updated_at?->diffForHumans(),
                 ] as $label => $text)
                     <div class="flex justify-between gap-3 border-b border-slate-100 pb-2">
@@ -140,13 +147,15 @@
                     </div>
                 @endforeach
             </dl>
-            @if ($venue->source_url)
+            @if (str_starts_with((string) $venue->source_url, 'http'))
                 <a href="{{ $venue->source_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
                     View source <x-icon name="external-link" class="size-3.5" />
                 </a>
+            @elseif ($venue->source_url)
+                <p class="mt-3 text-xs text-slate-500">Source: {{ $venue->source_url }}</p>
             @endif
             @if ($venue->notes)
-                <p class="mt-3 rounded-lg bg-amber-50 p-3 text-xs whitespace-pre-line text-amber-900">{{ $venue->notes }}</p>
+                <p class="mt-3 rounded-lg bg-amber-50 p-3 text-xs break-words whitespace-pre-line text-amber-900">{{ $venue->notes }}</p>
             @endif
         </section>
     </div>

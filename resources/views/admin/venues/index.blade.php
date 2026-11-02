@@ -1,4 +1,6 @@
 @php
+    use App\Models\Venue;
+
     $user = auth()->user();
     $exportQuery = array_filter($filters);
 @endphp
@@ -26,7 +28,7 @@
                     <div>
                         <p class="text-sm font-semibold">Import venues</p>
                         <p class="mt-0.5 text-xs text-slate-500">
-                            An .xlsx or .csv with the directory’s column headers. Rows with a Venue ID that already exists are updated; the rest are added.
+                            venues.csv from the directory import pack, or an export. Rows with a ref that already exists are updated (their slug never changes); new ones are added as drafts.
                         </p>
                     </div>
 
@@ -81,7 +83,11 @@
             <div class="flex flex-wrap items-center gap-2 text-sm">
                 <span class="badge-success">{{ $import['created'] }} added</span>
                 <span class="badge-muted">{{ $import['updated'] }} updated</span>
-                <span class="badge-muted">{{ $import['skipped'] }} empty rows skipped</span>
+                <span class="badge-muted">{{ $import['drafts'] }} in draft</span>
+                <span class="badge-success">{{ $import['checked'] }} checked, ready to go live</span>
+                @if ($import['skipped'])
+                    <span class="badge-muted">{{ $import['skipped'] }} empty rows skipped</span>
+                @endif
                 @if ($import['errors'])
                     <span class="badge-pending">{{ count($import['errors']) }} rows not imported</span>
                     <button type="button" @click="open = ! open" class="ml-auto text-xs font-medium text-brand-600 hover:underline" x-text="open ? 'Hide problems' : 'Show problems'">Show problems</button>
@@ -99,26 +105,28 @@
 
     <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <x-admin.stat label="Venues" :value="number_format($stats['total'])" :note="'Across '.$stats['states'].' '.str('state')->plural($stats['states'])" />
-        <x-admin.stat label="Open" :value="number_format($stats['open'])" note="Open to play" note-class="text-emerald-600" />
-        <x-admin.stat label="Closed" :value="number_format($stats['closed'])" note="No longer open" note-class="text-slate-500" />
-        <x-admin.stat label="Courts listed" :value="number_format($stats['courts'])" note="Where the count is known" note-class="text-slate-500" />
+        <x-admin.stat label="Published" :value="number_format($stats['published'])" note="Live in the directory" note-class="text-emerald-600" />
+        <x-admin.stat label="Ready to publish" :value="number_format($stats['ready'])" note="Checked, still in draft" note-class="text-brand-600" />
+        <x-admin.stat label="Name to confirm" :value="number_format($stats['confirmName'])" note="Map only gave the club’s name" note-class="text-amber-600" />
     </div>
 
-    <form method="GET" class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_repeat(3,10rem)]">
-        <x-admin.search :value="$filters['search']" placeholder="Search by name, suburb, postcode or ID" />
-        <x-admin.select name="state" :options="array_combine(\App\Models\Venue::STATES, \App\Models\Venue::STATES)" :selected="$filters['state']" placeholder="All states" />
-        <x-admin.select name="setting" :options="array_combine(\App\Models\Venue::SETTINGS, \App\Models\Venue::SETTINGS)" :selected="$filters['setting']" placeholder="Indoor & outdoor" />
-        <x-admin.select name="status" :options="array_combine(\App\Models\Venue::STATUSES, \App\Models\Venue::STATUSES)" :selected="$filters['status']" placeholder="Any status" />
+    <form method="GET" class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_repeat(4,10rem)]">
+        <x-admin.search :value="$filters['search']" placeholder="Search by name, suburb, postcode or ref" />
+        <x-admin.select name="state" :options="array_combine(Venue::STATES, Venue::STATES)" :selected="$filters['state']" placeholder="All states" />
+        <x-admin.select name="setting" :options="Venue::SETTINGS" :selected="$filters['setting']" placeholder="Indoor & outdoor" />
+        <x-admin.select name="record_status" :options="Venue::RECORD_STATUSES" :selected="$filters['record_status']" placeholder="Any record status" />
+        <x-admin.select name="status" :options="Venue::STATUSES" :selected="$filters['status']" placeholder="Draft & published" />
     </form>
 
     <div class="card mt-3 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[820px] text-left text-sm">
+            <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-slate-500">
                     <tr>
                         <th class="px-4 py-2.5 font-medium">Venue</th>
                         <th class="px-4 py-2.5 font-medium">Location</th>
                         <th class="px-4 py-2.5 font-medium">Courts</th>
+                        <th class="px-4 py-2.5 font-medium">Record</th>
                         <th class="px-4 py-2.5 font-medium">Status</th>
                         <th class="px-4 py-2.5 text-right font-medium">Actions</th>
                     </tr>
@@ -128,9 +136,12 @@
                         <tr class="transition hover:bg-slate-50/60">
                             <td class="max-w-80 px-4 py-2.5">
                                 <a href="{{ route('admin.venues.show', $venue) }}" class="font-medium hover:underline">{{ $venue->name }}</a>
+                                @if ($venue->name_needs_confirming)
+                                    <span class="badge-pending ml-1" title="The map only gave the club’s name for this venue">Name to confirm</span>
+                                @endif
                                 <p class="truncate text-xs text-slate-500">
-                                    <span class="font-mono">{{ $venue->code }}</span>
-                                    @if ($venue->address) · {{ $venue->address }} @endif
+                                    <span class="font-mono">{{ $venue->ref }}</span>
+                                    @if ($venue->street_address) · {{ $venue->street_address }} @endif
                                 </p>
                             </td>
                             <td class="px-4 py-2.5">
@@ -140,10 +151,11 @@
                             <td class="px-4 py-2.5 text-slate-600">
                                 <span class="font-medium text-ink-950 tabular-nums">{{ $venue->court_count ?? '—' }}</span>
                                 @if ($venue->indoor_outdoor)
-                                    <span class="ml-1 text-xs text-slate-500">{{ $venue->indoor_outdoor }}</span>
+                                    <span class="ml-1 text-xs text-slate-500">{{ $venue->label('indoor_outdoor') }}</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-2.5"><span class="{{ $venue->statusBadge() }}">{{ $venue->status }}</span></td>
+                            <td class="px-4 py-2.5"><span class="{{ $venue->recordStatusBadge() }}">{{ $venue->label('record_status') }}</span></td>
+                            <td class="px-4 py-2.5"><span class="{{ $venue->statusBadge() }}">{{ $venue->label('status') }}</span></td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1.5">
                                     <a href="{{ route('admin.venues.show', $venue) }}" class="icon-btn-view" title="View {{ $venue->name }}">
@@ -171,11 +183,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
                                 @if (array_filter($filters))
                                     No venues match your filters.
                                 @else
-                                    No venues yet. Add one, or import the directory spreadsheet.
+                                    No venues yet. Add one, or import venues.csv from the directory pack.
                                 @endif
                             </td>
                         </tr>

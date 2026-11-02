@@ -20,75 +20,42 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Venues in and out of the "Venues" tab of Pickleball_Directory_Verified.xlsx.
- * Same headers both ways, so an export can be edited and imported again.
+ * Venues in and out of venues.csv from the directory import pack (files/IMPORT_GUIDE.md).
+ * The headers are the table's column names, so an export can be edited and imported again.
  */
 class VenueSpreadsheet
 {
-    /** Spreadsheet header => form field. */
+    /** venues.csv columns in order, then status, which only the export adds. */
     public const COLUMNS = [
-        'Venue ID' => 'code',
-        'Venue name' => 'name',
-        'Venue type' => 'venue_type',
-        'Street address' => 'address',
-        'Suburb' => 'suburb',
-        'Postcode' => 'postcode',
-        'Council (LGA)' => 'council',
-        'City or region' => 'city',
-        'State' => 'state',
-        'Latitude' => 'latitude',
-        'Longitude' => 'longitude',
-        'Google place ID' => 'google_place_id',
-        'Number of courts' => 'court_count',
-        'Indoor/outdoor' => 'indoor_outdoor',
-        'Surface' => 'surface',
-        'Court lines' => 'court_lines',
-        'Lights' => 'lights',
-        'Covered' => 'facilities.covered',
-        'Nets provided' => 'facilities.nets_provided',
-        'Free to use' => 'facilities.free_to_use',
-        'Price (AUD per court hour)' => 'price_per_hour',
-        'Price notes' => 'price_notes',
-        'Booking required' => 'facilities.booking_required',
-        'Booking link' => 'booking_url',
-        'Opening hours' => 'opening_hours',
-        'Accessible' => 'facilities.accessible',
-        'Toilets' => 'facilities.toilets',
-        'Parking' => 'facilities.parking',
-        'Website' => 'website',
-        'Phone' => 'phone',
-        'Clubs that play here' => 'club_codes',
-        'Source type' => 'source_type',
-        'Source URL' => 'source_url',
-        'Date checked' => 'checked_at',
-        'Checked by' => 'checked_by',
-        'Status' => 'status',
-        'Notes' => 'notes',
+        'ref', 'slug', 'name', 'name_needs_confirming', 'venue_type',
+        'street_address', 'suburb', 'postcode', 'council', 'city', 'state', 'latitude', 'longitude', 'google_place_id',
+        'court_count', 'indoor_outdoor', 'surface', 'court_lines', 'nets', 'lights', 'covered', 'nets_provided', 'free_to_use',
+        'court_hire_cents', 'price_notes', 'booking_required', 'booking_url', 'opening_hours_text',
+        'accessible', 'toilets', 'parking', 'changing_rooms', 'cafe_kiosk', 'paddle_hire', 'website', 'phone',
+        'source_type', 'source_url', 'record_status', 'checked_at', 'checked_by', 'profile_tier', 'claim_status', 'enriched_at', 'notes',
+        'status',
     ];
 
-    private const NUMERIC = ['latitude', 'longitude', 'court_count', 'price_per_hour'];
+    private const BOOLEANS = [...Venue::FACILITIES, 'name_needs_confirming' => ''];
 
-    private const LISTS = [
-        'venue_type' => Venue::TYPES,
-        'state' => Venue::STATES,
-        'indoor_outdoor' => Venue::SETTINGS,
-        'surface' => Venue::SURFACES,
-        'court_lines' => Venue::COURT_LINES,
-        'source_type' => Venue::SOURCE_TYPES,
-        'status' => Venue::STATUSES,
-    ];
+    private const NUMERIC = ['latitude', 'longitude', 'court_count', 'court_hire_cents', 'profile_tier'];
+
+    private const DATES = ['checked_at', 'enriched_at'];
 
     /**
-     * @return array{created: int, updated: int, skipped: int, errors: list<string>}
+     * Insert new refs and update existing ones. Empty cells mean unknown and are
+     * saved as NULL; columns missing from the file are left alone.
+     *
+     * @return array{created: int, updated: int, skipped: int, drafts: int, checked: int, errors: list<string>}
      */
     public function import(string $path, string $extension): array
     {
-        $result = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => []];
+        $result = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'drafts' => 0, 'checked' => 0, 'errors' => []];
         $rows = $this->readRows($path, $extension);
 
-        $headers = array_map(fn ($header) => trim((string) $header), $rows->current() ?? []);
-        if (! in_array('Venue name', $headers)) {
-            throw new RuntimeException('The first row needs the column headers, including “Venue name”. Export venues to get a file in the right layout.');
+        $headers = array_map(fn ($header) => Str::lower(trim((string) $header)), $rows->current() ?? []);
+        if (! in_array('name', $headers)) {
+            throw new RuntimeException('The first row needs the column headers, including “name”. Export venues to get a file in the right layout.');
         }
         $rows->next();
 
@@ -96,19 +63,31 @@ class VenueSpreadsheet
             for ($line = 2; $rows->valid(); $rows->next(), $line++) {
                 $data = $this->toFields(array_combine($headers, array_pad(array_slice($rows->current(), 0, count($headers)), count($headers), null)));
 
-                // The directory pre-fills Venue IDs on empty rows, and has a sample row.
-                if (blank($data['name'] ?? null) || ($data['code'] ?? null) === 'EXAMPLE') {
+                if (blank($data['name'] ?? null)) {
                     $result['skipped']++;
 
                     continue;
                 }
 
-                $venue = filled($data['code'] ?? null) ? Venue::withTrashed()->firstWhere('code', $data['code']) : null;
-                $data['status'] ??= $venue->status ?? 'Open';
-                $validator = Validator::make($data, VenueRequest::fields($venue), [], VenueRequest::labels());
+                $venue = filled($data['ref'] ?? null) ? Venue::withTrashed()->firstWhere('ref', $data['ref']) : null;
+
+                if ($venue) {
+                    unset($data['slug']); // set once, never changed by a re-import
+                }
+                // These always have a value: an empty cell keeps what's there, or the default.
+                $data['record_status'] ??= $venue->record_status ?? 'to_check';
+                $data['claim_status'] ??= $venue->claim_status ?? 'not_contacted';
+                $data['profile_tier'] ??= $venue->profile_tier ?? 1;
+                $data['status'] ??= $venue->status ?? 'draft';
+                // A venue that is no longer checked goes back to draft rather than failing the row.
+                if ($data['status'] === 'published' && $data['record_status'] !== 'checked') {
+                    $data['status'] = 'draft';
+                }
+
+                $validator = Validator::make($data, VenueRequest::fields($venue), VenueRequest::messagesFor(), VenueRequest::labels());
 
                 if ($validator->fails()) {
-                    $label = $data['code'] ?? $data['name'];
+                    $label = $data['ref'] ?? $data['name'];
                     $result['errors'][] = "Row {$line} ({$label}): ".implode(' ', $validator->errors()->all());
 
                     continue;
@@ -116,8 +95,11 @@ class VenueSpreadsheet
 
                 $venue ??= new Venue;
                 $result[$venue->exists ? 'updated' : 'created']++;
-                $venue->fillFromForm($validator->validated(), keepUnsent: true)->save();
+                $venue->fill($validator->validated())->save();
                 $venue->trashed() && $venue->restore();
+
+                $venue->status === 'draft' && $result['drafts']++;
+                $venue->record_status === 'checked' && $result['checked']++;
             }
         });
 
@@ -136,13 +118,13 @@ class VenueSpreadsheet
 
         if ($writer instanceof XlsxWriter) {
             $writer->getCurrentSheet()->setName('Venues');
-            $writer->getOptions()->setColumnWidthForRange(18, 1, count(self::COLUMNS));
-            $writer->getOptions()->setColumnWidth(36, 2, 4);
+            $writer->getOptions()->setColumnWidthForRange(16, 1, count(self::COLUMNS));
+            $writer->getOptions()->setColumnWidth(36, 3);
         }
 
-        $writer->addRow(Row::fromValues(array_keys(self::COLUMNS), (new Style)->setFontBold()->setBackgroundColor('FBE08C')));
+        $writer->addRow(Row::fromValues(self::COLUMNS, (new Style)->setFontBold()->setBackgroundColor('FBE08C')));
 
-        foreach ($venues->reorder()->orderBy('code')->orderBy('id')->lazy(500) as $venue) {
+        foreach ($venues->reorder()->orderBy('ref')->orderBy('id')->lazy(500) as $venue) {
             $writer->addRow(Row::fromValues(array_map(fn (string $field) => $this->exportValue($venue, $field), self::COLUMNS)));
         }
 
@@ -162,7 +144,7 @@ class VenueSpreadsheet
 
         try {
             $sheets = iterator_to_array($reader->getSheetIterator(), false);
-            // The directory workbook has many tabs; use "Venues" when there is one.
+            // A workbook with several tabs: use "Venues" when there is one.
             $sheet = collect($sheets)->first(fn ($sheet) => strcasecmp($sheet->getName(), 'Venues') === 0) ?? $sheets[0];
 
             foreach ($sheet->getRowIterator() as $row) {
@@ -174,7 +156,7 @@ class VenueSpreadsheet
     }
 
     /**
-     * One spreadsheet row, cleaned up into the shape the venue form sends.
+     * One row keyed by header, cleaned up into the shape the venue form sends.
      *
      * @param  array<string, mixed>  $row
      * @return array<string, mixed>
@@ -183,16 +165,10 @@ class VenueSpreadsheet
     {
         $data = [];
 
-        foreach (self::COLUMNS as $header => $field) {
-            if (array_key_exists($header, $row)) {
-                data_set($data, $field, $this->clean($field, $row[$header]));
+        foreach (self::COLUMNS as $field) {
+            if (array_key_exists($field, $row)) {
+                $data[$field] = $this->clean($field, $row[$field]);
             }
-        }
-
-        // The directory workbook has "Record status" (To check, Checked, ...) instead of
-        // Status; only its "Closed" means anything here.
-        if (! array_key_exists('Status', $row) && strcasecmp(trim((string) ($row['Record status'] ?? '')), 'Closed') === 0) {
-            $data['status'] = 'Closed';
         }
 
         return $data;
@@ -204,26 +180,40 @@ class VenueSpreadsheet
             $value = trim($value);
         }
         if ($value === '' || $value === null) {
-            return null;
+            return $field === 'name_needs_confirming' ? false : null;
         }
 
         return match (true) {
-            $field === 'lights', str_starts_with($field, 'facilities.') => match (Str::lower((string) $value)) {
-                'yes', 'y', 'true', '1' => true,
-                'no', 'n', 'false', '0' => false,
+            isset(self::BOOLEANS[$field]) => match (Str::lower((string) $value)) {
+                '1', 'yes', 'y', 'true' => true,
+                '0', 'no', 'n', 'false' => false,
                 'unknown' => null,
                 default => $value, // left as-is so validation names the bad cell
             },
-            $field === 'checked_at' => $this->date($value),
+            in_array($field, self::DATES) => $this->date($value),
             // Excel turns 0800 into 800.
             $field === 'postcode' => is_numeric($value) ? str_pad((string) (int) $value, 4, '0', STR_PAD_LEFT) : $value,
-            in_array($field, ['website', 'booking_url', 'source_url']) => preg_match('~^https?://~i', $value) ? $value : "https://{$value}",
-            // "outdoor" -> "Outdoor"
-            isset(self::LISTS[$field]) => collect(self::LISTS[$field])->first(fn ($option) => strcasecmp($option, $value) === 0) ?? $value,
+            in_array($field, ['website', 'booking_url']) => preg_match('~^https?://~i', $value) ? $value : "https://{$value}",
+            $field === 'state' => Str::upper($value),
+            isset(Venue::LISTS[$field]) => $this->code(Venue::LISTS[$field], (string) $value),
             in_array($field, self::NUMERIC) => $value,
-            // A phone number or ID typed into a number cell still belongs in a text column.
+            // A phone number typed into a number cell still belongs in a text column.
             default => is_float($value) && floor($value) === $value ? (string) (int) $value : (string) $value,
         };
+    }
+
+    /** Accepts the code ("leisure_centre") or the label ("Leisure centre"). */
+    private function code(array $options, string $value): string
+    {
+        $key = Str::snake(Str::lower(preg_replace('/[^A-Za-z0-9]+/', ' ', $value)));
+
+        foreach ($options as $code => $label) {
+            if ($key === $code || $key === Str::snake(Str::lower(preg_replace('/[^A-Za-z0-9]+/', ' ', $label)))) {
+                return $code;
+            }
+        }
+
+        return $value;
     }
 
     private function date(mixed $value): mixed
@@ -232,7 +222,7 @@ class VenueSpreadsheet
             return $value->format('Y-m-d');
         }
 
-        foreach (['d/m/Y', 'Y-m-d'] as $format) {
+        foreach (['Y-m-d', 'd/m/Y'] as $format) {
             $date = rescue(fn () => CarbonImmutable::createFromFormat("!{$format}", (string) $value), null, report: false);
             if ($date && $date->format($format) === (string) $value) {
                 return $date->format('Y-m-d');
@@ -245,13 +235,11 @@ class VenueSpreadsheet
     private function exportValue(Venue $venue, string $field): mixed
     {
         $value = match (true) {
-            str_starts_with($field, 'facilities.') => $venue->facility(Str::after($field, 'facilities.')),
-            $field === 'club_codes' => implode(', ', $venue->clubCodes()),
-            $field === 'checked_at' => $venue->checked_at?->format('d/m/Y'),
-            $field === 'price_per_hour' => $venue->price_per_hour === null ? null : (float) $venue->price_per_hour,
+            in_array($field, self::DATES) => $venue->getAttribute($field)?->format('Y-m-d'),
             default => $venue->getAttribute($field),
         };
 
-        return is_bool($value) ? ($value ? 'Yes' : 'No') : $value;
+        // Same formats as the pack: 1/0 for booleans, empty for unknown.
+        return is_bool($value) ? (int) $value : $value;
     }
 }
