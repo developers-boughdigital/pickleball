@@ -12,9 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Arr;
 use Illuminate\View\View;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VenueController extends Controller implements HasMiddleware
@@ -26,7 +24,6 @@ class VenueController extends Controller implements HasMiddleware
             new Middleware('permission:venues.create', only: ['create', 'store']),
             new Middleware('permission:venues.update', only: ['edit', 'update']),
             new Middleware('permission:venues.delete', only: ['destroy']),
-            new Middleware('permission:venues.import', only: ['import']),
             new Middleware('permission:venues.export', only: ['export']),
         ];
     }
@@ -36,7 +33,7 @@ class VenueController extends Controller implements HasMiddleware
         $filters = $this->filters($request);
 
         return view('admin.venues.index', [
-            'venues' => $this->filtered($filters)->orderBy('state')->orderBy('name')->paginate(20)->withQueryString(),
+            'venues' => $this->filtered($filters)->withCount('clubs')->orderBy('state')->orderBy('name')->paginate(20)->withQueryString(),
             'filters' => $filters,
             'stats' => [
                 'total' => Venue::count(),
@@ -65,6 +62,8 @@ class VenueController extends Controller implements HasMiddleware
 
     public function show(Venue $venue): View
     {
+        $venue->load(['clubs' => fn ($query) => $query->orderByDesc('club_venue.is_primary')->orderBy('name')]);
+
         return view('admin.venues.show', ['venue' => $venue]);
     }
 
@@ -95,37 +94,6 @@ class VenueController extends Controller implements HasMiddleware
         return redirect()->route('admin.venues.index')->with('status', "Deleted {$venue->name}.");
     }
 
-    public function import(Request $request, VenueSpreadsheet $spreadsheet): RedirectResponse
-    {
-        $request->validate([
-            'file' => ['required', 'file', 'max:10240', 'extensions:xlsx,csv'],
-        ], ['file.extensions' => 'Upload an .xlsx or .csv file.']);
-
-        $file = $request->file('file');
-
-        try {
-            $result = $spreadsheet->import($file->getRealPath(), strtolower($file->getClientOriginalExtension()));
-        } catch (RuntimeException $e) {
-            return back()->withErrors(['file' => $e->getMessage()]);
-        }
-
-        $summary = "{$result['created']} added, {$result['updated']} updated";
-        if ($result['errors']) {
-            $summary .= ', '.count($result['errors']).' with problems';
-        }
-        $summary .= ". {$result['drafts']} in draft; {$result['checked']} checked and ready to go live";
-
-        ActivityLog::record('venue.imported', "Imported venues from {$file->getClientOriginalName()}: {$summary}", succeeded: ! $result['errors'], changes: [
-            'file' => ['from' => null, 'to' => $file->getClientOriginalName()],
-            'rows' => ['from' => null, 'to' => Arr::except($result, 'errors')],
-        ]);
-
-        return redirect()->route('admin.venues.index')->with([
-            'status' => "Import finished: {$summary}.",
-            'import' => $result,
-        ]);
-    }
-
     public function export(Request $request, VenueSpreadsheet $spreadsheet): StreamedResponse
     {
         $format = $request->query('format') === 'csv' ? 'csv' : 'xlsx';
@@ -144,22 +112,20 @@ class VenueController extends Controller implements HasMiddleware
                 : null);
         }
 
-        return response()->streamDownload(
-            fn () => $spreadsheet->export($query, $format),
-            "{$filename}.{$format}",
-            ['Content-Type' => $format === 'csv' ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-        );
+        return response()->streamDownload(fn () => $spreadsheet->export($query, $format), "{$filename}.{$format}", ImportController::contentType($format));
     }
 
-    /** @return array{search: ?string, state: ?string, record_status: ?string, status: ?string, setting: ?string} */
+    /** @return array{search: ?string, state: ?string, setting: ?string, record_status: ?string, status: ?string} */
     private function filters(Request $request): array
     {
+        $pick = fn (string $key, array $options) => array_key_exists((string) $request->query($key), $options) ? $request->query($key) : null;
+
         return [
             'search' => $request->string('search')->trim()->value() ?: null,
             'state' => in_array($request->query('state'), Venue::STATES) ? $request->query('state') : null,
-            'record_status' => array_key_exists((string) $request->query('record_status'), Venue::RECORD_STATUSES) ? $request->query('record_status') : null,
-            'status' => array_key_exists((string) $request->query('status'), Venue::STATUSES) ? $request->query('status') : null,
-            'setting' => array_key_exists((string) $request->query('setting'), Venue::SETTINGS) ? $request->query('setting') : null,
+            'setting' => $pick('setting', Venue::SETTINGS),
+            'record_status' => $pick('record_status', Venue::RECORD_STATUSES),
+            'status' => $pick('status', Venue::STATUSES),
         ];
     }
 
@@ -169,8 +135,8 @@ class VenueController extends Controller implements HasMiddleware
         return Venue::query()
             ->search($filters['search'])
             ->when($filters['state'], fn (Builder $query, string $state) => $query->where('state', $state))
+            ->when($filters['setting'], fn (Builder $query, string $setting) => $query->where('indoor_outdoor', $setting))
             ->when($filters['record_status'], fn (Builder $query, string $status) => $query->where('record_status', $status))
-            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status))
-            ->when($filters['setting'], fn (Builder $query, string $setting) => $query->where('indoor_outdoor', $setting));
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status));
     }
 }

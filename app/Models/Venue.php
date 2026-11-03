@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DirectoryListing;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 class Venue extends Model
 {
-    use HasUuids, SoftDeletes;
+    use DirectoryListing, HasUuids, SoftDeletes;
+
+    public const REF_PREFIX = 'V';
 
     // Codes as they appear in venues.csv => what the admin shows.
     public const TYPES = [
@@ -23,8 +26,6 @@ class Venue extends Model
         'community_hall' => 'Community hall',
         'private' => 'Private',
     ];
-
-    public const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
     public const SETTINGS = ['indoor' => 'Indoor', 'outdoor' => 'Outdoor', 'both' => 'Indoor & outdoor'];
 
@@ -44,26 +45,6 @@ class Venue extends Model
         'shared_lines' => 'Shared lines (tennis or other)',
         'both' => 'Both',
     ];
-
-    public const RECORD_STATUSES = [
-        'to_check' => 'To check',
-        'checked' => 'Checked',
-        'needs_follow_up' => 'Needs follow-up',
-        'duplicate' => 'Duplicate',
-        'closed' => 'Closed',
-    ];
-
-    public const CLAIM_STATUSES = [
-        'not_contacted' => 'Not contacted',
-        'invited' => 'Invited',
-        'claimed' => 'Claimed',
-        'profile_completed' => 'Profile completed',
-        'removal_requested' => 'Removal requested',
-        'removed' => 'Removed',
-    ];
-
-    /** Publishing state. Only checked venues can be published. */
-    public const STATUSES = ['draft' => 'Draft', 'published' => 'Published'];
 
     /** Yes/No/Unknown columns, in the order venues.csv lists them. */
     public const FACILITIES = [
@@ -94,13 +75,7 @@ class Venue extends Model
 
     protected $guarded = ['id', 'created_at', 'updated_at', 'deleted_at'];
 
-    protected $attributes = [
-        'name_needs_confirming' => false,
-        'record_status' => 'to_check',
-        'claim_status' => 'not_contacted',
-        'profile_tier' => 1,
-        'status' => 'draft',
-    ];
+    protected $attributes = ['name_needs_confirming' => false];
 
     protected function casts(): array
     {
@@ -118,79 +93,10 @@ class Venue extends Model
         ];
     }
 
-    protected static function booted(): void
+    /** Clubs that play here; the pivot's is_primary marks a club's main venue. */
+    public function clubs(): BelongsToMany
     {
-        static::creating(function (Venue $venue) {
-            $venue->ref ??= static::nextRef();
-            $venue->slug = $venue->uniqueSlug($venue->slug ?: $venue->name);
-        });
-
-        static::saving(function (Venue $venue) {
-            // A slug is set once; links to the venue must keep working after a rename.
-            if ($venue->exists && $venue->isDirty('slug')) {
-                $venue->slug = $venue->getOriginal('slug');
-            }
-
-            if ($venue->status === 'published' && $venue->record_status !== 'checked') {
-                $venue->status = 'draft';
-            }
-        });
-    }
-
-    /** V0001, V0002, ... continuing after the highest ref in use. */
-    public static function nextRef(): string
-    {
-        $highest = static::withTrashed()->where('ref', 'like', 'V%')->pluck('ref')
-            ->map(fn (string $ref) => (int) substr($ref, 1))
-            ->max() ?? 0;
-
-        return sprintf('V%04d', $highest + 1);
-    }
-
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
-
-    /** "pickledome", "pickledome-2", ... */
-    private function uniqueSlug(string $text): string
-    {
-        $base = Str::slug($text) ?: 'venue';
-        $taken = static::withTrashed()->where('slug', 'like', "{$base}%")->pluck('slug')->flip();
-
-        $slug = $base;
-        for ($i = 2; $taken->has($slug); $i++) {
-            $slug = "{$base}-{$i}";
-        }
-
-        return $slug;
-    }
-
-    /** The admin label for a coded column, e.g. "leisure_centre" -> "Leisure centre". */
-    public function label(string $field): ?string
-    {
-        $value = $this->getAttribute($field);
-
-        return $value === null ? null : (self::LISTS[$field][$value] ?? $value);
-    }
-
-    public function statusBadge(): string
-    {
-        return $this->status === 'published' ? 'badge-success' : 'badge-muted';
-    }
-
-    public function recordStatusBadge(): string
-    {
-        return match ($this->record_status) {
-            'checked' => 'badge-success',
-            'to_check', 'needs_follow_up' => 'badge-pending',
-            default => 'badge-muted',
-        };
-    }
-
-    public function courtHire(): ?string
-    {
-        return $this->court_hire_cents === null ? null : '$'.number_format($this->court_hire_cents / 100, 2);
+        return $this->belongsToMany(Club::class)->withPivot('is_primary')->withTimestamps();
     }
 
     public function fullAddress(): string

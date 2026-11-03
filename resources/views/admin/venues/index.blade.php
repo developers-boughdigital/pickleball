@@ -8,44 +8,10 @@
 <x-admin.layout title="Venues" :breadcrumb="['Directory', 'Venues']">
     <x-admin.page-header title="Venues" subtitle="Where people can play: courts, facilities and how to book.">
         @can('venues.import')
-            <div x-data="{ open: @js($errors->has('file')) }" class="relative">
-                <button type="button" @click="open = ! open" class="btn-outline">
-                    <x-icon name="upload" class="size-4" />
-                    Import
-                </button>
-
-                <form
-                    x-show="open"
-                    x-transition.origin.top.right
-                    x-cloak
-                    @click.outside="open = false"
-                    method="POST"
-                    action="{{ route('admin.venues.import') }}"
-                    enctype="multipart/form-data"
-                    class="card absolute right-0 z-20 mt-2 w-80 space-y-3 p-4"
-                >
-                    @csrf
-                    <div>
-                        <p class="text-sm font-semibold">Import venues</p>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            venues.csv from the directory import pack, or an export. Rows with a ref that already exists are updated (their slug never changes); new ones are added as drafts.
-                        </p>
-                    </div>
-
-                    <input type="file" name="file" required accept=".xlsx,.csv" class="block w-full text-sm text-slate-600 file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:text-sm file:font-medium hover:file:bg-slate-200">
-                    @error('file') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
-
-                    <div class="flex items-center justify-between gap-2">
-                        @can('venues.export')
-                            <a href="{{ route('admin.venues.export', ['template' => 1]) }}" download class="text-xs font-medium text-brand-600 hover:underline">Blank template</a>
-                        @endcan
-                        <button class="btn-gold ml-auto">
-                            <x-icon name="upload" class="size-4" />
-                            Import
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <a href="{{ route('admin.import', ['type' => 'venues']) }}" class="btn-outline">
+                <x-icon name="upload" class="size-4" />
+                Import
+            </a>
         @endcan
 
         @can('venues.export')
@@ -77,31 +43,6 @@
             </a>
         @endcan
     </x-admin.page-header>
-
-    @if ($import = session('import'))
-        <div x-data="{ open: false }" class="card mt-4 p-4">
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-                <span class="badge-success">{{ $import['created'] }} added</span>
-                <span class="badge-muted">{{ $import['updated'] }} updated</span>
-                <span class="badge-muted">{{ $import['drafts'] }} in draft</span>
-                <span class="badge-success">{{ $import['checked'] }} checked, ready to go live</span>
-                @if ($import['skipped'])
-                    <span class="badge-muted">{{ $import['skipped'] }} empty rows skipped</span>
-                @endif
-                @if ($import['errors'])
-                    <span class="badge-pending">{{ count($import['errors']) }} rows not imported</span>
-                    <button type="button" @click="open = ! open" class="ml-auto text-xs font-medium text-brand-600 hover:underline" x-text="open ? 'Hide problems' : 'Show problems'">Show problems</button>
-                @endif
-            </div>
-            @if ($import['errors'])
-                <ul x-show="open" x-cloak class="mt-3 max-h-64 space-y-1 overflow-auto rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
-                    @foreach ($import['errors'] as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
-    @endif
 
     <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <x-admin.stat label="Venues" :value="number_format($stats['total'])" :note="'Across '.$stats['states'].' '.str('state')->plural($stats['states'])" />
@@ -141,6 +82,7 @@
                                 @endif
                                 <p class="truncate text-xs text-slate-500">
                                     <span class="font-mono">{{ $venue->ref }}</span>
+                                    @if ($venue->clubs_count) · {{ $venue->clubs_count }} {{ str('club')->plural($venue->clubs_count) }} @endif
                                     @if ($venue->street_address) · {{ $venue->street_address }} @endif
                                 </p>
                             </td>

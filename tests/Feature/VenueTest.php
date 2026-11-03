@@ -100,7 +100,8 @@ class VenueTest extends TestCase
         $this->put(route('admin.venues.update', $venue), $this->form)->assertForbidden();
         $this->delete(route('admin.venues.destroy', $venue))->assertForbidden();
         $this->get('/admin/venues/export')->assertForbidden();
-        $this->post('/admin/venues/import')->assertForbidden();
+        $this->post('/admin/import', ['type' => 'venues'])->assertForbidden();
+        $this->get('/admin/import')->assertForbidden();
         $this->get('/dashboard')->assertSee(route('admin.venues.index'));
 
         $this->signInAs(null);
@@ -222,8 +223,8 @@ class VenueTest extends TestCase
             $this->row(['ref' => 'V0006']), // nothing but a ref
         ]);
 
-        $this->post('/admin/venues/import', ['file' => $file])
-            ->assertRedirect('/admin/venues')
+        $this->post('/admin/import', ['type' => 'venues', 'file' => $file])
+            ->assertRedirect('/admin/import?type=venues')
             ->assertSessionHas('import', fn ($result) => $result['created'] === 2 && $result['updated'] === 0 && $result['skipped'] === 1 && count($result['errors']) === 1
                 && str_contains($result['errors'][0], 'Row 4 (V0005)') && str_contains($result['errors'][0], 'State') && str_contains($result['errors'][0], 'Lights'));
 
@@ -247,7 +248,7 @@ class VenueTest extends TestCase
         $this->assertEqualsWithDelta(-12.469109, $darwin->latitude, 0.000001);
 
         $this->assertFalse(ActivityLog::firstWhere('action', 'venue.imported')->succeeded);
-        $this->assertSame('Import finished: 2 added, 0 updated, 1 with problems. 2 in draft; 1 checked and ready to go live.', session('status'));
+        $this->assertSame('Venues imported: 2 added, 0 updated, 1 with problems. 2 in draft; 1 checked and ready to go live.', session('status'));
     }
 
     public function test_reimporting_updates_by_ref_and_never_changes_the_slug(): void
@@ -263,7 +264,7 @@ class VenueTest extends TestCase
             ['V0002', 'darwin-waterfront', 'Darwin Waterfront', '', '', ''],
         ]);
 
-        $this->post('/admin/venues/import', ['file' => $file])
+        $this->post('/admin/import', ['type' => 'venues', 'file' => $file])
             ->assertSessionHas('import', fn ($result) => $result['created'] === 1 && $result['updated'] === 1 && ! $result['errors']);
 
         $venue = Venue::firstWhere('ref', 'V0001');
@@ -286,9 +287,9 @@ class VenueTest extends TestCase
     {
         $this->signInAs(Role::SUPER_ADMIN);
 
-        $this->post('/admin/venues/import', ['file' => $this->spreadsheet([['Title', 'Town'], ['Pickledome', 'Fadden']])])
+        $this->post('/admin/import', ['type' => 'venues', 'file' => $this->spreadsheet([['Title', 'Town'], ['Pickledome', 'Fadden']])])
             ->assertSessionHasErrors('file');
-        $this->post('/admin/venues/import', ['file' => UploadedFile::fake()->create('venues.pdf', 10)])
+        $this->post('/admin/import', ['type' => 'venues', 'file' => UploadedFile::fake()->create('venues.pdf', 10)])
             ->assertSessionHasErrors('file');
 
         $this->assertSame(0, Venue::count());
@@ -327,7 +328,7 @@ class VenueTest extends TestCase
         $this->assertTrue(ActivityLog::where('action', 'venue.exported')->exists());
 
         // Importing the export changes nothing.
-        $this->post('/admin/venues/import', ['file' => new UploadedFile($path, 'venues.xlsx', null, null, true)])
+        $this->post('/admin/import', ['type' => 'venues', 'file' => new UploadedFile($path, 'venues.xlsx', null, null, true)])
             ->assertSessionHas('import', fn ($result) => $result['created'] === 0 && $result['updated'] === 2 && ! $result['errors']);
         $this->assertSame(2, Venue::count());
         $this->assertSame('published', Venue::firstWhere('ref', 'V0002')->status);

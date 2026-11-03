@@ -15,7 +15,9 @@
     <form
         method="POST"
         action="{{ $editing ? route('admin.venues.update', $venue) : route('admin.venues.store') }}"
-        x-data="{ name: @js($value('name') ?? ''), recordStatus: @js($value('record_status')) }"
+        x-data="{ dirty: false, name: @js($value('name') ?? ''), recordStatus: @js($value('record_status')) }"
+        @input="dirty = true"
+        @change="dirty = true"
         class="mt-3 space-y-3"
     >
         @csrf

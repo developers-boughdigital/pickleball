@@ -103,7 +103,7 @@
                 <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                     @php($links = ['Website' => $venue->website, 'Booking link' => $venue->booking_url])
                     @forelse ($details([
-                        'Court hire per hour' => $venue->courtHire(),
+                        'Court hire per hour' => $venue->money('court_hire_cents'),
                         'Price notes' => $venue->price_notes,
                         'Opening hours' => $venue->opening_hours_text,
                         'Phone' => $venue->phone,
@@ -125,6 +125,27 @@
                         <p class="text-slate-500">No booking or contact details yet.</p>
                     @endforelse
                 </dl>
+            </section>
+
+            <section class="card p-4 sm:p-5">
+                <h2 class="mb-3 text-sm font-semibold">Clubs that play here</h2>
+                @forelse ($venue->clubs as $club)
+                    <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm last:border-0">
+                        <div class="min-w-0">
+                            @can('clubs.view')
+                                <a href="{{ route('admin.clubs.show', $club) }}" class="font-medium hover:underline">{{ $club->name }}</a>
+                            @else
+                                <span class="font-medium">{{ $club->name }}</span>
+                            @endcan
+                            <span class="ml-1 font-mono text-xs text-slate-500">{{ $club->ref }}</span>
+                        </div>
+                        @if ($club->pivot->is_primary)
+                            <span class="badge-success shrink-0">Main venue</span>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">No clubs linked yet. Import club_venue.csv, or add this venue on a club.</p>
+                @endforelse
             </section>
         </div>
 

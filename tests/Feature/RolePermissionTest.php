@@ -36,7 +36,7 @@ class RolePermissionTest extends TestCase
         $this->assertSame([Role::SUPER_ADMIN, 'Viewer'], Role::orderBy('id')->pluck('name')->all());
         $this->assertSame($this->catalogSize(), Permission::count());
         $this->assertEqualsCanonicalizing(
-            ['Dashboard', 'Users', 'Roles', 'Permissions', 'Activity Log', 'Venues', 'System Settings'],
+            ['Dashboard', 'Users', 'Roles', 'Permissions', 'Activity Log', 'Venues', 'Clubs', 'System Settings'],
             Permission::modules()->all(),
         );
 

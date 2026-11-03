@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ClubController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\VenueController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
@@ -38,10 +40,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('permissions', PermissionController::class)->except('show');
         Route::get('activity-log', ActivityLogController::class)->name('activity');
 
-        // Before the resource, so "export" isn't read as a venue slug.
+        // Before the resources, so "export" isn't read as a slug.
         Route::get('venues/export', [VenueController::class, 'export'])->name('venues.export');
-        Route::post('venues/import', [VenueController::class, 'import'])->name('venues.import');
         Route::resource('venues', VenueController::class);
+        Route::get('clubs/export', [ClubController::class, 'export'])->name('clubs.export');
+        Route::resource('clubs', ClubController::class);
+
+        Route::controller(ImportController::class)->group(function () {
+            Route::get('import', 'index')->name('import');
+            Route::post('import', 'store')->name('import.store');
+            Route::get('import/template/{type}', 'template')->name('import.template');
+            Route::get('import/club-venue/export', 'export')->name('import.club-venue-export');
+        });
 
         Route::get('settings', [SettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings');
         Route::put('settings', [SettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');

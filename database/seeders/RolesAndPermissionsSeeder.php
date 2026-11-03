@@ -52,6 +52,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'venues.import' => 'Import venues from a spreadsheet',
             'venues.export' => 'Export venues to a spreadsheet',
         ],
+        'Clubs' => [
+            'clubs.view' => 'View clubs',
+            'clubs.create' => 'Add clubs',
+            'clubs.update' => 'Edit clubs and the venues they play at',
+            'clubs.delete' => 'Delete clubs',
+            'clubs.import' => 'Import clubs and club–venue links from a spreadsheet',
+            'clubs.export' => 'Export clubs and club–venue links to a spreadsheet',
+        ],
         'System Settings' => [
             'settings.view' => 'View system settings',
             'settings.update' => 'Change system settings',
