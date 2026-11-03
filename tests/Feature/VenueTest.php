@@ -327,9 +327,10 @@ class VenueTest extends TestCase
         $this->assertCount(3, $rows);
         $this->assertTrue(ActivityLog::where('action', 'venue.exported')->exists());
 
-        // Importing the export changes nothing.
+        // Importing the export changes nothing — do not report those rows as updated.
         $this->post('/admin/import', ['type' => 'venues', 'file' => new UploadedFile($path, 'venues.xlsx', null, null, true)])
-            ->assertSessionHas('import', fn ($result) => $result['created'] === 0 && $result['updated'] === 2 && ! $result['errors']);
+            ->assertSessionHas('import', fn ($result) => $result['created'] === 0 && $result['updated'] === 0 && ! $result['errors'])
+            ->assertSessionHas('status', 'Venues imported: 0 added, 0 updated. 1 in draft; 1 checked and ready to go live.');
         $this->assertSame(2, Venue::count());
         $this->assertSame('published', Venue::firstWhere('ref', 'V0002')->status);
         $this->assertNull(Venue::firstWhere('ref', 'V0001')->covered);

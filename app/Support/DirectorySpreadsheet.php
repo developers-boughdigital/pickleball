@@ -102,8 +102,19 @@ abstract class DirectorySpreadsheet
                 }
 
                 $listing ??= new $model;
-                $result[$listing->exists ? 'updated' : 'created']++;
-                $listing->fill($validator->validated())->save();
+                $isNew = ! $listing->exists;
+                $listing->fill($validator->validated());
+
+                // Same data as already stored: leave the row alone so "updated" only means a real change.
+                if (! $isNew && ! $listing->isDirty() && ! $listing->trashed()) {
+                    $listing->status === 'draft' && $result['drafts']++;
+                    $listing->record_status === 'checked' && $result['checked']++;
+
+                    continue;
+                }
+
+                $result[$isNew ? 'created' : 'updated']++;
+                $listing->save();
                 $listing->trashed() && $listing->restore();
 
                 $listing->status === 'draft' && $result['drafts']++;

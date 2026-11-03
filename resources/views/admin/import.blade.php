@@ -2,9 +2,9 @@
     use App\Http\Controllers\Admin\ImportController;
 
     $help = [
-        'venues' => 'Every venue. Matched on ref (V0001): existing venues are updated and their slug never changes; new ones are added as drafts.',
-        'clubs' => 'Every club. Matched on ref (C0001): existing clubs are updated and their slug never changes; new ones are added as drafts.',
-        'club_venue' => 'Which venues each club plays at (is_primary = 1 for the main venue). Import venues and clubs first. For every club in the file, links that are no longer listed are removed.',
+        'venues' => 'Every venue. Matched on ref (V0001): existing venues with changes are updated (identical rows are left alone) and their slug never changes; new ones are added as drafts.',
+        'clubs' => 'Every club. Matched on ref (C0001): existing clubs with changes are updated (identical rows are left alone) and their slug never changes; new ones are added as drafts.',
+        'club_venue' => 'Which venues each club plays at (is_primary = 1 for the main venue). Import venues and clubs first. For every club in the file, links that are no longer listed are removed. Identical links are left alone.',
     ];
     $countLabel = ['venues' => 'venues', 'clubs' => 'clubs', 'club_venue' => 'links'];
 @endphp

@@ -76,9 +76,18 @@ class ClubVenueSpreadsheet
                 $club = Club::find($clubs[$clubRef]);
                 $existing = $club->venues()->pluck('is_primary', 'venues.id')->map(fn ($primary) => (bool) $primary);
 
-                $result['created'] += count(array_diff_key($sync, $existing->all()));
-                $result['removed'] += $existing->diffKeys($sync)->count();
-                $result['updated'] += collect($sync)->filter(fn ($pivot, $id) => $existing->has($id) && $existing[$id] !== $pivot['is_primary'])->count();
+                $created = count(array_diff_key($sync, $existing->all()));
+                $removed = $existing->diffKeys($sync)->count();
+                $updated = collect($sync)->filter(fn ($pivot, $id) => $existing->has($id) && $existing[$id] !== $pivot['is_primary'])->count();
+
+                // Same links and primary flags: leave the club alone so counts stay at zero.
+                if ($created === 0 && $removed === 0 && $updated === 0) {
+                    continue;
+                }
+
+                $result['created'] += $created;
+                $result['removed'] += $removed;
+                $result['updated'] += $updated;
                 $result['clubs']++;
 
                 $club->venues()->sync($sync);

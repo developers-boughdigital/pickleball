@@ -87,6 +87,13 @@ class ImportPageTest extends TestCase
         $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'drafts' => 1, 'checked' => 1], ActivityLog::firstWhere('action', 'club.imported')->changes['rows']['to']);
 
         $this->get('/admin/import')->assertSee('Booking method')->assertSee('Row 3 (C0002)');
+
+        // Re-importing the same rows must not report them as updated.
+        $this->post('/admin/import', ['type' => 'clubs', 'file' => $this->csv([
+            array_slice(ClubSpreadsheet::COLUMNS, 0, -1),
+            $this->clubRow(['ref' => 'C0001', 'slug' => 'pickleball-act', 'name' => 'Pickleball ACT', 'postcode' => '2617', 'state' => 'ACT', 'levels' => 'beginner|Advanced', 'session_types' => 'social|womens', 'beginners_welcome' => '1', 'juniors' => '0', 'casual_fee_cents' => '1400', 'booking_method' => 'book_online', 'email' => 'Info@PickleballACT.org.', 'website' => 'www.pickleballact.org', 'record_status' => 'checked', 'profile_tier' => '2', 'claim_status' => 'not_contacted', 'enrichment_evidence' => 'Website says: sessions on OpenSports']),
+        ])])->assertSessionHas('status', 'Clubs imported: 0 added, 0 updated. 1 in draft; 1 checked and ready to go live.')
+            ->assertSessionHas('import', fn ($result) => $result['created'] === 0 && $result['updated'] === 0 && ! $result['errors']);
     }
 
     public function test_club_venue_links_are_synced_per_club(): void
@@ -110,6 +117,13 @@ class ImportPageTest extends TestCase
 
         $this->assertSame('V0001', $act->primaryVenue()->ref);
         $this->assertSame(2, $act->venues()->count());
+
+        // Same links again: nothing to report.
+        $this->post('/admin/import', ['type' => 'club_venue', 'file' => $this->csv([
+            ['club_ref', 'venue_ref', 'is_primary'],
+            ['C0001', 'V0001', '1'],
+            ['C0001', 'V0002', '0'],
+        ])])->assertSessionHas('status', 'Club & venue links imported: 0 links added, 0 changed, 0 removed across 0 clubs.');
 
         // Next week's file: V0002 becomes the main venue and V0001 is gone.
         $this->post('/admin/import', ['type' => 'club_venue', 'file' => $this->csv([
