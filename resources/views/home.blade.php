@@ -7,6 +7,9 @@
         @else
             <p class="mt-2 text-emerald-50">Log in or create an account to get started.</p>
             <div class="mt-6 flex flex-wrap gap-3">
+                <a href="{{ route('explore') }}" class="rounded-lg bg-ink-950 px-4 py-2 text-sm font-semibold text-white hover:bg-ink-900">
+                    Explore clubs & venues
+                </a>
                 <a href="{{ route('login') }}" class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
                     Log in
                 </a>

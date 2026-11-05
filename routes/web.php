@@ -14,10 +14,18 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExploreController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('home'))->name('home');
+
+// The public directory.
+Route::controller(ExploreController::class)->prefix('explore')->name('explore')->group(function () {
+    Route::get('/', 'index');
+    Route::get('clubs/{club}', 'club')->name('.club');
+    Route::get('venues/{venue}', 'venue')->name('.venue');
+});
 
 // no_store keeps browsers from restoring these forms from history with an old CSRF token.
 Route::middleware(['guest', 'cache.headers:no_store;private'])->group(function () {

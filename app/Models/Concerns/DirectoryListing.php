@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 /**
@@ -33,6 +34,9 @@ trait DirectoryListing
 
     /** Publishing state. Only checked listings can be published. */
     public const STATUSES = ['draft' => 'Draft', 'published' => 'Published'];
+
+    /** Sort value for listings without coordinates, so they come last on every database. */
+    public const UNKNOWN_DISTANCE = 999999;
 
     public const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
@@ -114,6 +118,20 @@ trait DirectoryListing
             'to_check', 'needs_follow_up' => 'badge-pending',
             default => 'badge-muted',
         };
+    }
+
+    /** What the public site may show: published listings, or everything in an admin preview. */
+    public function scopeVisible(Builder $query, bool $drafts = false): void
+    {
+        $query->when(! $drafts, fn (Builder $query) => $query->where($this->qualifyColumn('status'), 'published'));
+    }
+
+    /** Distance in km from the squared-degrees value the explore page sorts by. */
+    public function distanceKm(): ?float
+    {
+        $distance = $this->getAttribute('distance');
+
+        return $distance === null || $distance >= self::UNKNOWN_DISTANCE ? null : sqrt((float) $distance) * 111.32;
     }
 
     /** "$13.00" from a *_cents column. */

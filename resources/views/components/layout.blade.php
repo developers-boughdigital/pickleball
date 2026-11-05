@@ -33,6 +33,7 @@
                         <button class="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-100">Log out</button>
                     </form>
                 @else
+                    <a href="{{ route('explore') }}" class="hover:text-emerald-600">Explore</a>
                     <a href="{{ route('login') }}" class="hover:text-emerald-600">Log in</a>
                     <a href="{{ route('register') }}" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700">Register</a>
                 @endauth
