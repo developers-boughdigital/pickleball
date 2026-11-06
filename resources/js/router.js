@@ -1,9 +1,11 @@
 /**
- * Small client-side navigation for the admin area.
+ * Small client-side navigation for the admin area and the public site.
  *
  * Links and GET forms are fetched in the background, and every element marked
  * with [data-swap] is replaced by the element with the same id in the response.
  * The rest of the layout (sidebar shell, header, open dropdowns) stays put.
+ * Moving between layouts (<body data-layout>, e.g. site → admin) loads the page
+ * normally, since the two share no regions.
  */
 import Alpine from 'alpinejs';
 
@@ -34,10 +36,10 @@ export async function visit(url, { push = true, method = 'GET', body = null, fal
         });
         const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
 
-        // We ended up outside the admin layout (e.g. logged out, or the session
+        // We ended up in another layout (e.g. logged out, or the session
         // expired and we got the login page), so load that page normally. A
         // GET or a redirect is safe to repeat as a GET; anything else isn't.
-        if (!doc.querySelector('[data-swap]')) {
+        if (!doc.querySelector('[data-swap]') || doc.body.dataset.layout !== document.body.dataset.layout) {
             if (method === 'GET' || response.redirected) location.assign(response.url);
             else fullLoad();
             return;
@@ -143,7 +145,7 @@ function rememberFocus() {
 function restoreFocus(focused) {
     if (!focused) return;
 
-    const el = document.querySelector(`#content [name="${focused.name}"]`);
+    const el = document.querySelector(`[data-swap] [name="${focused.name}"]`);
     if (!el) return;
 
     el.focus();

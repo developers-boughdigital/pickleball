@@ -22,6 +22,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body
+    data-layout="admin"
     x-data="adminLayout"
     @keydown.escape.window="sidebarOpen = false"
     @spa-navigated.window="sidebarOpen = false"

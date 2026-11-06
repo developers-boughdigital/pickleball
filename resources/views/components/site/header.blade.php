@@ -10,7 +10,7 @@
     preg_match('/^(.*\S)(\s+\S+|[A-Z][^A-Z\s]*)$/u', config('app.name'), $name);
 @endphp
 
-<header class="border-b border-line bg-white" x-data="{ open: false }">
+<header class="border-b border-line bg-white" x-data="{ open: false }" @spa-navigated.window="open = false">
     <div class="site-wrap flex min-h-20 flex-wrap items-center gap-x-6 gap-y-2 py-3">
         <a href="{{ route('home') }}" class="flex items-center gap-2.5 no-underline" aria-label="{{ config('app.name') }} home">
             @if (config('app.logo'))
@@ -36,7 +36,7 @@
             <x-icon name="menu" class="size-6" />
         </button>
 
-        <nav aria-label="Main" class="hidden w-full flex-col gap-1 sm:flex sm:w-auto sm:flex-1 sm:flex-row sm:flex-wrap" :class="open && '!flex'">
+        <nav id="site-nav" data-swap aria-label="Main" class="hidden w-full flex-col gap-1 sm:flex sm:w-auto sm:flex-1 sm:flex-row sm:flex-wrap" :class="open && '!flex'">
             @foreach ($nav as $route => [$label, $active])
                 <a href="{{ route($route) }}" @class([
                     'rounded-xl px-3.5 py-2.5 font-bold no-underline',
@@ -46,9 +46,9 @@
             @endforeach
         </nav>
 
-        <div class="hidden gap-2 sm:flex" :class="open && '!flex'">
+        <div id="site-account" data-swap class="hidden gap-2 sm:flex" :class="open && '!flex'">
             @auth
-                <a href="{{ route('dashboard') }}" class="site-btn-outline">Admin</a>
+                <a href="{{ route('dashboard') }}" data-reload class="site-btn-outline">Admin</a>
             @else
                 <a href="{{ route('login') }}" @class(['site-btn-outline', 'site-chip-on' => request()->routeIs('login')])>Log in</a>
                 <a href="{{ route('register') }}" class="site-btn-primary">Register</a>

@@ -114,7 +114,7 @@
                             this.locating = true;
                             this.problem = '';
                             navigator.geolocation.getCurrentPosition(
-                                (spot) => { this.$refs.lat.value = spot.coords.latitude.toFixed(4); this.$refs.lng.value = spot.coords.longitude.toFixed(4); this.$refs.lat.disabled = this.$refs.lng.disabled = false; this.$el.submit(); },
+                                (spot) => { this.$refs.lat.value = spot.coords.latitude.toFixed(4); this.$refs.lng.value = spot.coords.longitude.toFixed(4); this.$refs.lat.disabled = this.$refs.lng.disabled = false; this.$el.requestSubmit(); },
                                 () => { this.locating = false; this.problem = 'We couldn’t get your location. Try a suburb or postcode instead.'; },
                                 { timeout: 10000 },
                             );
