@@ -1,10 +1,10 @@
 <x-layout title="Register">
-    <div class="mx-auto max-w-md">
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <h1 class="text-2xl font-bold">Create your account</h1>
-            <p class="mt-1 text-sm text-slate-500">Join {{ config('app.name') }} in a few seconds.</p>
+    <div class="mx-auto max-w-[480px]">
+        <div class="rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)] sm:p-8">
+            <h1 class="font-display text-4xl leading-[42px] font-bold">Create your account</h1>
+            <p class="mt-2 text-lg leading-7 text-muted">Join {{ config('app.name') }} in a few seconds.</p>
 
-            <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-5">
+            <form method="POST" action="{{ route('register') }}" class="mt-6 flex flex-col gap-5">
                 @csrf
 
                 <x-input name="name" label="Name" required autofocus autocomplete="name" />
@@ -12,16 +12,14 @@
                 <x-input name="password" label="Password" type="password" required autocomplete="new-password" />
                 <x-input name="password_confirmation" label="Confirm password" type="password" required autocomplete="new-password" />
 
-                <button type="submit" class="w-full rounded-lg bg-court px-4 py-2 text-sm font-semibold text-white hover:bg-court-deep">
-                    Register
-                </button>
+                <button type="submit" class="site-btn-primary min-h-14 w-full text-lg">Register</button>
             </form>
 
             @include('auth.partials.google')
 
-            <p class="mt-6 text-center text-sm text-slate-500">
+            <p class="mt-6 text-center text-muted">
                 Already have an account?
-                <a href="{{ route('login') }}" class="font-medium text-court hover:underline">Log in</a>
+                <a href="{{ route('login') }}" class="site-link">Log in</a>
             </p>
         </div>
     </div>

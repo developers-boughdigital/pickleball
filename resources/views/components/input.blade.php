@@ -1,15 +1,16 @@
+{{-- A labelled text field for the log in and register forms, in the public site's style. --}}
 @props(['name', 'label', 'type' => 'text'])
 
-<div>
-    <label for="{{ $name }}" class="block text-sm font-medium">{{ $label }}</label>
+<div class="flex flex-col gap-1.5">
+    <label for="{{ $name }}" class="font-bold">{{ $label }}</label>
     <input id="{{ $name }}" name="{{ $name }}" type="{{ $type }}"
            @if ($type !== 'password') value="{{ old($name) }}" @endif
+           @error($name) aria-invalid="true" aria-describedby="{{ $name }}-error" @enderror
            {{ $attributes->class([
-               'mt-1 block h-9 w-full rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none',
-               'border-red-400 focus:border-red-500 focus:ring-red-200' => $errors->has($name),
-               'border-slate-300 focus:border-court focus:ring-court/30' => ! $errors->has($name),
+               'site-field',
+               'border-[#b42318] focus:border-[#b42318] focus:ring-[#b42318]/30' => $errors->has($name),
            ]) }}>
     @error($name)
-        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+        <p id="{{ $name }}-error" class="font-bold text-[#b42318]">{{ $message }}</p>
     @enderror
 </div>
