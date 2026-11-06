@@ -12,7 +12,7 @@
                 <x-input name="password" label="Password" type="password" required autocomplete="new-password" />
                 <x-input name="password_confirmation" label="Confirm password" type="password" required autocomplete="new-password" />
 
-                <button type="submit" class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+                <button type="submit" class="w-full rounded-lg bg-court px-4 py-2 text-sm font-semibold text-white hover:bg-court-deep">
                     Register
                 </button>
             </form>
@@ -21,7 +21,7 @@
 
             <p class="mt-6 text-center text-sm text-slate-500">
                 Already have an account?
-                <a href="{{ route('login') }}" class="font-medium text-emerald-600 hover:underline">Log in</a>
+                <a href="{{ route('login') }}" class="font-medium text-court hover:underline">Log in</a>
             </p>
         </div>
     </div>

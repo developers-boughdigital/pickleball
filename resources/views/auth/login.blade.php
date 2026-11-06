@@ -11,11 +11,11 @@
                 <x-input name="password" label="Password" type="password" required autocomplete="current-password" />
 
                 <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" name="remember" class="rounded border-slate-300 accent-emerald-600">
+                    <input type="checkbox" name="remember" class="rounded border-slate-300 accent-court">
                     Remember me
                 </label>
 
-                <button type="submit" class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+                <button type="submit" class="w-full rounded-lg bg-court px-4 py-2 text-sm font-semibold text-white hover:bg-court-deep">
                     Log in
                 </button>
             </form>
@@ -24,7 +24,7 @@
 
             <p class="mt-6 text-center text-sm text-slate-500">
                 Don't have an account?
-                <a href="{{ route('register') }}" class="font-medium text-emerald-600 hover:underline">Register</a>
+                <a href="{{ route('register') }}" class="font-medium text-court hover:underline">Register</a>
             </p>
         </div>
     </div>

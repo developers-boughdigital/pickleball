@@ -21,6 +21,29 @@
     --color-ink-900: #111821;
     --color-ink-950: #0a1017;
 
+    /* Public site (design/Dink Circle City page and Coach index.html) */
+    --font-display: 'Barlow Semi Condensed', 'Arial Narrow', ui-sans-serif, sans-serif;
+    --font-read: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+
+    --color-court: #1f4fa3;
+    --color-court-deep: #163b7a;
+    --color-court-soft: #e6eefb;
+    --color-gum: #5dc293;
+    --color-gum-soft: #e3f4eb;
+    --color-gum-text: #1e6b49;
+    --color-ball: #ffc93c;
+    --color-ball-soft: #fff4d1;
+    --color-navy: #0f1b2d;
+    --color-muted: #4a5872;
+    --color-surface: #f5f8fc;
+    --color-line: #d5dde8;
+    --color-line-strong: #6f81a0;
+    --color-level-new: #0e7c86;
+    --color-level-beginner: #2e7d32;
+    --color-level-intermediate: #1f4fa3;
+    --color-level-advanced: #6a3fb5;
+    --color-level-open: #9e2a2b;
+
     --animate-progress: progress 1s ease-in-out infinite;
 
     @keyframes progress {
@@ -116,5 +139,61 @@
 
     .badge-pending {
         @apply bg-amber-100 text-amber-800 ring-1 ring-amber-300;
+    }
+
+    /* Public site */
+    .site-wrap {
+        @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6;
+    }
+
+    .site-card {
+        @apply rounded-xl bg-white shadow-[0_4px_12px_rgb(15_27_45/0.10)];
+    }
+
+    .site-h2 {
+        @apply font-display text-[28px] leading-[34px] font-bold;
+    }
+
+    .site-h3 {
+        @apply font-display text-[22px] leading-7 font-semibold;
+    }
+
+    .site-btn,
+    .site-btn-primary,
+    .site-btn-outline,
+    .site-btn-ball {
+        @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-transparent px-5 font-bold no-underline transition;
+    }
+
+    .site-btn-primary {
+        @apply bg-court text-white hover:bg-court-deep hover:text-white;
+    }
+
+    .site-btn-outline {
+        @apply border-line-strong bg-white text-court hover:bg-court-soft hover:text-court-deep;
+    }
+
+    .site-btn-ball {
+        @apply bg-ball text-navy hover:brightness-95;
+    }
+
+    .site-chip {
+        @apply inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-2 border-line-strong bg-white px-4 font-bold text-navy no-underline transition hover:border-court hover:text-court-deep;
+    }
+
+    .site-chip-on {
+        @apply border-court bg-court-soft text-court-deep;
+    }
+
+    .site-field {
+        @apply min-h-14 w-full rounded-md border-2 border-line-strong bg-white px-4 text-lg text-navy placeholder:text-muted focus:border-court focus:ring-2 focus:ring-court/30 focus:outline-none;
+    }
+
+    .site-tag {
+        @apply inline-flex min-h-8 items-center rounded-full px-3 font-bold whitespace-nowrap;
+    }
+
+    .site-link {
+        @apply font-bold text-court hover:text-court-deep hover:underline;
     }
 }

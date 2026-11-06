@@ -38,48 +38,48 @@ class ExploreTest extends TestCase
 
     public function test_anyone_can_explore_published_clubs(): void
     {
-        $this->get('/explore')->assertOk()
+        $this->get('/explore/clubs')->assertOk()
             ->assertSee('Pickleball ACT')
             ->assertSee('Top End Dinkers')
             ->assertSee('Beginners welcome')
-            ->assertSee('$14.00 a session')
+            ->assertSeeText('$14.00 a session')
             ->assertDontSee('Secret Draft Club')
             ->assertDontSee('Preview drafts');
 
-        $this->get('/explore?state=NT')->assertSee('Top End Dinkers')->assertDontSee('Pickleball ACT');
-        $this->get('/explore?level=advanced')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
-        $this->get('/explore?beginners=1')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
-        $this->get('/explore?q=belconnen')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
-        $this->get('/explore?q=nowhere')->assertSee('No clubs match that search.');
+        $this->get('/explore/clubs?state=NT')->assertSee('Top End Dinkers')->assertDontSee('Pickleball ACT');
+        $this->get('/explore/clubs?level=advanced')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?beginners=1')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?q=belconnen')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?q=nowhere')->assertSee('No clubs match that search.');
     }
 
     public function test_venues_tab(): void
     {
-        $this->get('/explore?tab=venues')->assertOk()
+        $this->get('/explore/venues')->assertOk()
             ->assertSee('Pickledome')
             ->assertSee('11 courts')
-            ->assertSee('$25.00 an hour')
+            ->assertSeeText('$25.00 an hour')
             ->assertSee('1 club plays here')
             ->assertDontSee('Secret Draft Venue');
 
-        $this->get('/explore?tab=venues&setting=outdoor')->assertSee('Darwin Waterfront')->assertDontSee('Pickledome');
-        $this->get('/explore?tab=venues&lights=1')->assertSee('Pickledome')->assertDontSee('Darwin Waterfront');
+        $this->get('/explore/venues?setting=outdoor')->assertSee('Darwin Waterfront')->assertDontSee('Pickledome');
+        $this->get('/explore/venues?lights=1')->assertSee('Pickledome')->assertDontSee('Darwin Waterfront');
     }
 
     public function test_near_me_sorts_by_distance(): void
     {
         // Standing in Darwin.
-        $this->get('/explore?tab=venues&lat=-12.46&lng=130.84')->assertOk()
+        $this->get('/explore/venues?lat=-12.46&lng=130.84')->assertOk()
             ->assertSeeInOrder(['Darwin Waterfront', 'Pickledome'])
             ->assertSee('1.1 km away')
             ->assertSee('nearest first');
 
         // Standing in Canberra; clubs go by their venues.
-        $this->get('/explore?lat=-35.28&lng=149.13')->assertSeeInOrder(['Pickleball ACT', 'Top End Dinkers']);
-        $this->get('/explore?lat=-12.46&lng=130.84')->assertSeeInOrder(['Top End Dinkers', 'Pickleball ACT']);
+        $this->get('/explore/clubs?lat=-35.28&lng=149.13')->assertSeeInOrder(['Pickleball ACT', 'Top End Dinkers']);
+        $this->get('/explore/clubs?lat=-12.46&lng=130.84')->assertSeeInOrder(['Top End Dinkers', 'Pickleball ACT']);
 
         // Nonsense coordinates are ignored.
-        $this->get('/explore?lat=abc&lng=999')->assertOk()->assertDontSee('nearest first');
+        $this->get('/explore/clubs?lat=abc&lng=999')->assertOk()->assertDontSee('nearest first');
     }
 
     public function test_detail_pages_show_public_details_only(): void
@@ -122,9 +122,67 @@ class ExploreTest extends TestCase
         $this->get('/explore/venues/secret-draft-venue?drafts=1')->assertOk();
     }
 
+    public function test_area_page_counts_and_lists_the_area(): void
+    {
+        $this->get('/explore')->assertOk()
+            ->assertSee('Pickleball in Australia')
+            ->assertSee('Browse by state')
+            ->assertSee('Pickledome')
+            ->assertSee('Pickleball ACT')
+            ->assertSee('Tue 7–9pm all levels')
+            ->assertDontSee('Secret Draft');
+
+        $this->get('/explore?state=act')->assertOk()
+            ->assertSee('Pickleball in Australian Capital Territory')
+            ->assertSee('Browse by suburb')
+            ->assertSee('Pickledome')
+            ->assertDontSee('Darwin Waterfront')
+            ->assertDontSee('Top End Dinkers');
+
+        $this->get('/explore?state=NT&area=Darwin+City')->assertOk()
+            ->assertSee('Pickleball in Darwin City')
+            ->assertSee('Darwin Waterfront')
+            ->assertDontSee('Top End Dinkers'); // the club's suburb is Darwin, not Darwin City
+
+        // An area needs a state, and a made-up state is ignored.
+        $this->get('/explore?area=Darwin+City')->assertSee('Pickleball in Australia');
+        $this->get('/explore?state=XX')->assertSee('Pickleball in Australia');
+    }
+
+    public function test_old_explore_links_go_to_the_lists(): void
+    {
+        $this->get('/explore?tab=venues&state=NT')->assertRedirect('/explore/venues?state=NT');
+        $this->get('/explore?q=act')->assertRedirect('/explore/clubs?q=act');
+    }
+
+    public function test_lists_filter_by_area_and_fees(): void
+    {
+        $this->get('/explore/clubs?state=ACT&area=belconnen')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?max_fee=15')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?max_fee=10')->assertDontSee('Pickleball ACT');
+    }
+
+    public function test_coach_index_filters_the_placeholder_coaches(): void
+    {
+        Club::firstWhere('name', 'Pickleball ACT')->update(['coaching_available' => true, 'coach_names_text' => 'Head coach Jo, PA Level 2']);
+
+        $this->get('/explore/coaches')->assertOk()
+            ->assertSee('Find a coach who fits your game.')
+            ->assertSee('9 coaches')
+            ->assertSee('Head coach Jo, PA Level 2');
+
+        $this->get('/explore/coaches?levels[]=open')->assertSee('Dev R.')->assertSee('Tom L.')->assertDontSee('Mei W.')->assertSee('Remove');
+        $this->get('/explore/coaches?price=under_60&wwcc=1')->assertSee('Mei W.')->assertDontSee('Ann B.')->assertDontSee('Sam M.');
+        $this->get('/explore/coaches?where=eltham')->assertSee('1 coach')->assertSee('Sam M.');
+        $this->get('/explore/coaches?lat=-37.7140&lng=145.1480&distance=5')->assertSee('Sam M.')->assertSee('0.0 km')->assertDontSee('Tom L.');
+        $this->get('/explore/coaches?focus[]=fitness&types[]=corporate&sort=price')->assertSeeInOrder(['Luke P.', 'Tom L.']);
+        $this->get('/explore/coaches?levels[]=open&types[]=school')->assertSee('No coaches match those filters.');
+    }
+
     public function test_empty_directory(): void
     {
         Club::query()->update(['status' => 'draft']);
+        Venue::query()->update(['status' => 'draft']);
 
         $this->get('/explore')->assertOk()->assertSee('No clubs listed yet.')->assertSee('Check back soon');
     }

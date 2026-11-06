@@ -20,9 +20,9 @@ class AdminPagesTest extends TestCase
         }
     }
 
-    public function test_home_redirects_signed_in_users_to_dashboard(): void
+    public function test_signed_in_users_can_see_the_home_page(): void
     {
-        $this->actingAs(User::factory()->create())->get('/')->assertRedirect('/dashboard');
+        $this->actingAs(User::factory()->create())->get('/')->assertOk()->assertSee(route('dashboard'));
     }
 
     public function test_dashboard_shows_real_counts_activity_and_roles(): void

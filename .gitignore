@@ -46,3 +46,4 @@ Thumbs.db
 composer.lock
 .phpunit.result.cache
 /files
+/design

@@ -18,13 +18,16 @@ use App\Http\Controllers\ExploreController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('home'))->name('home');
+Route::view('/', 'home')->name('home');
 
 // The public directory.
 Route::controller(ExploreController::class)->prefix('explore')->name('explore')->group(function () {
     Route::get('/', 'index');
+    Route::get('clubs', 'clubs')->name('.clubs');
     Route::get('clubs/{club}', 'club')->name('.club');
+    Route::get('venues', 'venues')->name('.venues');
     Route::get('venues/{venue}', 'venue')->name('.venue');
+    Route::get('coaches', 'coaches')->name('.coaches');
 });
 
 // no_store keeps browsers from restoring these forms from history with an old CSRF token.

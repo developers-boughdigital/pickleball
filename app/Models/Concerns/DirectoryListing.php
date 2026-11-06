@@ -40,6 +40,17 @@ trait DirectoryListing
 
     public const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
+    public const STATE_NAMES = [
+        'ACT' => 'Australian Capital Territory',
+        'NSW' => 'New South Wales',
+        'NT' => 'Northern Territory',
+        'QLD' => 'Queensland',
+        'SA' => 'South Australia',
+        'TAS' => 'Tasmania',
+        'VIC' => 'Victoria',
+        'WA' => 'Western Australia',
+    ];
+
     public function initializeDirectoryListing(): void
     {
         $this->attributes += [
@@ -124,6 +135,17 @@ trait DirectoryListing
     public function scopeVisible(Builder $query, bool $drafts = false): void
     {
         $query->when(! $drafts, fn (Builder $query) => $query->where($this->qualifyColumn('status'), 'published'));
+    }
+
+    /** Listings in a state and, optionally, a city, council area or suburb within it. */
+    public function scopeInArea(Builder $query, ?string $state, ?string $area = null): void
+    {
+        $query
+            ->when($state, fn (Builder $query) => $query->where($this->qualifyColumn('state'), $state))
+            ->when($area, fn (Builder $query) => $query->where(fn (Builder $query) => $query
+                ->whereLike($this->qualifyColumn('city'), $area)
+                ->orWhereLike($this->qualifyColumn('council'), $area)
+                ->orWhereLike($this->qualifyColumn('suburb'), $area)));
     }
 
     /** Distance in km from the squared-degrees value the explore page sorts by. */
