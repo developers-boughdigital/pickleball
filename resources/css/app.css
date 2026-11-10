@@ -113,6 +113,19 @@
         @apply cursor-not-allowed text-slate-300;
     }
 
+    .icon-btn-publish,
+    .icon-btn-hide {
+        @apply grid size-8 cursor-pointer place-items-center transition;
+    }
+
+    .icon-btn-publish {
+        @apply text-emerald-600 hover:text-emerald-800;
+    }
+
+    .icon-btn-hide {
+        @apply text-amber-600 hover:text-amber-800;
+    }
+
     .badge-gold,
     .badge-muted,
     .badge-danger,

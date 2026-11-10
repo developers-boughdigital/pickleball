@@ -12,6 +12,22 @@ Alpine.data('permissionForm', permissionForm);
 Alpine.data('permissionPicker', permissionPicker);
 Alpine.data('settingsForm', settingsForm);
 
+// Ticked rows on the venue and club lists, for <x-admin.publish-bar>. "all" means
+// every row matching the filters, not just this page.
+Alpine.data('publishing', (page) => ({
+    selected: [],
+    all: false,
+    page,
+
+    init() {
+        this.$watch('selected', (ids) => ids.length < this.page.length && (this.all = false));
+    },
+
+    togglePage(checked) {
+        this.selected = checked ? [...this.page] : [];
+    },
+}));
+
 // Admin shell: on desktop the menu button collapses the sidebar to the icon rail
 // (remembered between visits); on smaller screens it opens the sidebar as a drawer.
 Alpine.data('adminLayout', () => ({

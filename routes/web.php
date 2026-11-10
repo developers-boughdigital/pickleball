@@ -66,6 +66,8 @@ Route::middleware('auth')->group(function () {
 
         // Before the resources, so "export" isn't read as a slug.
         Route::get('venues/export', [VenueController::class, 'export'])->name('venues.export');
+        Route::post('venues/status', [VenueController::class, 'status'])->name('venues.status');
+        Route::post('clubs/status', [ClubController::class, 'status'])->name('clubs.status');
         Route::resource('venues', VenueController::class);
         Route::get('clubs/export', [ClubController::class, 'export'])->name('clubs.export');
         Route::resource('clubs', ClubController::class);

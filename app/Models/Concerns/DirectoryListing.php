@@ -33,8 +33,11 @@ trait DirectoryListing
         'removed' => 'Removed',
     ];
 
-    /** Publishing state. Only checked listings can be published. */
-    public const STATUSES = ['draft' => 'Draft', 'published' => 'Published'];
+    /**
+     * Publishing state. Only checked listings can be published. Hidden is a
+     * listing taken off the public site after it was live; draft never was.
+     */
+    public const STATUSES = ['draft' => 'Draft', 'published' => 'Published', 'hidden' => 'Hidden'];
 
     /** Sort value for listings without coordinates, so they come last on every database. */
     public const UNKNOWN_DISTANCE = 999999;
@@ -125,7 +128,11 @@ trait DirectoryListing
 
     public function statusBadge(): string
     {
-        return $this->status === 'published' ? 'badge-success' : 'badge-muted';
+        return match ($this->status) {
+            'published' => 'badge-success',
+            'hidden' => 'badge-pending',
+            default => 'badge-muted',
+        };
     }
 
     public function recordStatusBadge(): string

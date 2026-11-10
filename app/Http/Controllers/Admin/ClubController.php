@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ChangesListingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ClubRequest;
 use App\Models\ActivityLog;
@@ -18,6 +19,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ClubController extends Controller implements HasMiddleware
 {
+    use ChangesListingStatus;
+
     public static function middleware(): array
     {
         return [
@@ -26,6 +29,7 @@ class ClubController extends Controller implements HasMiddleware
             new Middleware('permission:clubs.update', only: ['edit', 'update']),
             new Middleware('permission:clubs.delete', only: ['destroy']),
             new Middleware('permission:clubs.export', only: ['export']),
+            new Middleware('permission:clubs.publish', only: ['status']),
         ];
     }
 
@@ -40,6 +44,7 @@ class ClubController extends Controller implements HasMiddleware
                 'total' => Club::count(),
                 'states' => Club::distinct()->count('state'),
                 'published' => Club::where('status', 'published')->count(),
+                'hidden' => Club::where('status', 'hidden')->count(),
                 'ready' => Club::where('record_status', 'checked')->where('status', 'draft')->count(),
                 'noVenue' => Club::doesntHave('venues')->count(),
             ],
@@ -139,6 +144,12 @@ class ClubController extends Controller implements HasMiddleware
     }
 
     /** @return array{search: ?string, state: ?string, record_status: ?string, status: ?string} */
+    /** Publish, hide or return to draft: one club, the ticked rows, or all matching the filters. */
+    public function status(Request $request): RedirectResponse
+    {
+        return $this->changeStatus($request, $this->filtered($this->filters($request)), 'club');
+    }
+
     private function filters(Request $request): array
     {
         $pick = fn (string $key, array $options) => array_key_exists((string) $request->query($key), $options) ? $request->query($key) : null;

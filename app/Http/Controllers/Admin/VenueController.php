@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ChangesListingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\VenueRequest;
 use App\Models\ActivityLog;
@@ -17,6 +18,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VenueController extends Controller implements HasMiddleware
 {
+    use ChangesListingStatus;
+
     public static function middleware(): array
     {
         return [
@@ -25,6 +28,7 @@ class VenueController extends Controller implements HasMiddleware
             new Middleware('permission:venues.update', only: ['edit', 'update']),
             new Middleware('permission:venues.delete', only: ['destroy']),
             new Middleware('permission:venues.export', only: ['export']),
+            new Middleware('permission:venues.publish', only: ['status']),
         ];
     }
 
@@ -39,6 +43,7 @@ class VenueController extends Controller implements HasMiddleware
                 'total' => Venue::count(),
                 'states' => Venue::distinct()->count('state'),
                 'published' => Venue::where('status', 'published')->count(),
+                'hidden' => Venue::where('status', 'hidden')->count(),
                 'ready' => Venue::where('record_status', 'checked')->where('status', 'draft')->count(),
                 'confirmName' => Venue::where('name_needs_confirming', true)->count(),
             ],
@@ -116,6 +121,12 @@ class VenueController extends Controller implements HasMiddleware
     }
 
     /** @return array{search: ?string, state: ?string, setting: ?string, record_status: ?string, status: ?string} */
+    /** Publish, hide or return to draft: one venue, the ticked rows, or all matching the filters. */
+    public function status(Request $request): RedirectResponse
+    {
+        return $this->changeStatus($request, $this->filtered($this->filters($request)), 'venue');
+    }
+
     private function filters(Request $request): array
     {
         $pick = fn (string $key, array $options) => array_key_exists((string) $request->query($key), $options) ? $request->query($key) : null;

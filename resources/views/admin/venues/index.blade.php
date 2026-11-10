@@ -46,8 +46,10 @@
 
     <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <x-admin.stat label="Venues" :value="number_format($stats['total'])" :note="'Across '.$stats['states'].' '.str('state')->plural($stats['states'])" />
-        <x-admin.stat label="Published" :value="number_format($stats['published'])" note="Live in the directory" note-class="text-emerald-600" />
-        <x-admin.stat label="Ready to publish" :value="number_format($stats['ready'])" note="Checked, still in draft" note-class="text-brand-600" />
+        <x-admin.stat label="Published" :value="number_format($stats['published'])" :note="'Live in the directory'.($stats['hidden'] ? ' · '.number_format($stats['hidden']).' hidden' : '')" note-class="text-emerald-600" />
+        <a href="{{ route('admin.venues.index', ['record_status' => 'checked', 'status' => 'draft']) }}" class="block rounded-xl transition hover:ring-2 hover:ring-brand-300">
+            <x-admin.stat label="Ready to publish" :value="number_format($stats['ready'])" note="Checked, still in draft. Show them" note-class="text-brand-600" />
+        </a>
         <x-admin.stat label="Name to confirm" :value="number_format($stats['confirmName'])" note="Map only gave the club’s name" note-class="text-amber-600" />
     </div>
 
@@ -56,14 +58,21 @@
         <x-admin.select name="state" :options="array_combine(Venue::STATES, Venue::STATES)" :selected="$filters['state']" placeholder="All states" />
         <x-admin.select name="setting" :options="Venue::SETTINGS" :selected="$filters['setting']" placeholder="Indoor & outdoor" />
         <x-admin.select name="record_status" :options="Venue::RECORD_STATUSES" :selected="$filters['record_status']" placeholder="Any record status" />
-        <x-admin.select name="status" :options="Venue::STATUSES" :selected="$filters['status']" placeholder="Draft & published" />
+        <x-admin.select name="status" :options="Venue::STATUSES" :selected="$filters['status']" placeholder="Any status" />
     </form>
 
-    <div class="card mt-3 overflow-hidden">
+    <div class="card mt-3 overflow-hidden" x-data="publishing(@js($venues->pluck('id')))">
+        <x-admin.publish-bar type="venues" noun="venue" :paginator="$venues" :filters="$filters" />
         <div class="overflow-x-auto">
             <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-slate-500">
                     <tr>
+                        @can('venues.publish')
+                            <th class="w-10 py-2.5 pl-4">
+                                <input type="checkbox" class="size-4 accent-brand-500" aria-label="Select every venue on this page"
+                                    :checked="page.length && selected.length === page.length" @change="togglePage($event.target.checked)">
+                            </th>
+                        @endcan
                         <th class="px-4 py-2.5 font-medium">Venue</th>
                         <th class="px-4 py-2.5 font-medium">Location</th>
                         <th class="px-4 py-2.5 font-medium">Courts</th>
@@ -74,7 +83,12 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200 border-t border-slate-200">
                     @forelse ($venues as $venue)
-                        <tr class="transition hover:bg-slate-50/60">
+                        <tr class="transition hover:bg-slate-50/60" :class="(all || selected.includes(@js($venue->id))) && 'bg-brand-50/60'">
+                            @can('venues.publish')
+                                <td class="py-2.5 pl-4">
+                                    <input type="checkbox" form="bulk-venues" name="ids[]" value="{{ $venue->id }}" x-model="selected" class="size-4 accent-brand-500" aria-label="Select {{ $venue->name }}">
+                                </td>
+                            @endcan
                             <td class="max-w-80 px-4 py-2.5">
                                 <a href="{{ route('admin.venues.show', $venue) }}" class="font-medium hover:underline">{{ $venue->name }}</a>
                                 @if ($venue->name_needs_confirming)
@@ -100,6 +114,7 @@
                             <td class="px-4 py-2.5"><span class="{{ $venue->statusBadge() }}">{{ $venue->label('status') }}</span></td>
                             <td class="px-4 py-2.5">
                                 <div class="flex justify-end gap-1.5">
+                                    <x-admin.publish-toggle type="venues" :listing="$venue" />
                                     <a href="{{ route('admin.venues.show', $venue) }}" class="icon-btn-view" title="View {{ $venue->name }}">
                                         <x-icon name="eye" class="size-4" />
                                         <span class="sr-only">View {{ $venue->name }}</span>
@@ -125,7 +140,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                            <td colspan="{{ auth()->user()->can('venues.publish') ? 7 : 6 }}" class="px-4 py-8 text-center text-slate-500">
                                 @if (array_filter($filters))
                                     No venues match your filters.
                                 @else

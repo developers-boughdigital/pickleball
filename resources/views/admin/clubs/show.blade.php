@@ -23,6 +23,7 @@
         </x-admin.form-heading>
 
         <div class="flex items-center gap-2">
+            <x-admin.publish-toggle type="clubs" :listing="$club" labelled />
             @can('clubs.delete')
                 <form method="POST" action="{{ route('admin.clubs.destroy', $club) }}" @submit="confirm(@js("Delete {$club->name}?")) || $event.preventDefault()">
                     @csrf

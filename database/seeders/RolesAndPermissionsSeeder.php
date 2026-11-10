@@ -51,6 +51,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'venues.delete' => 'Delete venues',
             'venues.import' => 'Import venues from a spreadsheet',
             'venues.export' => 'Export venues to a spreadsheet',
+            'venues.publish' => 'Publish and hide checked venues on the public site',
         ],
         'Clubs' => [
             'clubs.view' => 'View clubs',
@@ -59,6 +60,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'clubs.delete' => 'Delete clubs',
             'clubs.import' => 'Import clubs and club–venue links from a spreadsheet',
             'clubs.export' => 'Export clubs and club–venue links to a spreadsheet',
+            'clubs.publish' => 'Publish and hide checked clubs on the public site',
         ],
         'System Settings' => [
             'settings.view' => 'View system settings',
