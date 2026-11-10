@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Locality;
 use App\Models\Venue;
+use App\Support\Area;
 use App\Support\SampleCoaches;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,54 +25,17 @@ class ExploreController extends Controller
 {
     private const PER_PAGE = 24;
 
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): RedirectResponse
     {
         // Links from before the area page (/explore?tab=venues&q=…) went straight to a list.
         if ($request->hasAny(['tab', 'q', 'lat'])) {
             return redirect()->route($request->query('tab') === 'venues' ? 'explore.venues' : 'explore.clubs', $request->except('tab'));
         }
 
-        $drafts = $this->showsDrafts($request);
-        $state = $this->state($request);
-        $area = $state ? $this->area($request) : null;
+        // The area page moved to /play/{state}/{city}/{council}/{suburb}/.
+        $area = $this->legacyArea($request);
 
-        $venues = fn () => Venue::query()->visible($drafts)->inArea($state, $area);
-        $clubs = fn () => Club::query()->visible($drafts)->inArea($state, $area);
-        $clubCounts = ['venues' => fn (Builder $query) => $query->visible($drafts)];
-
-        return view('explore.index', [
-            'state' => $state,
-            'area' => $area,
-            'place' => $area ?? ($state ? Venue::STATE_NAMES[$state] : 'Australia'),
-            'drafts' => $drafts,
-            'canPreview' => $this->canPreview($request),
-            'stats' => [
-                'venues' => $venues()->count(),
-                'clubs' => $clubs()->count(),
-                'indoor' => $venues()->whereIn('indoor_outdoor', ['indoor', 'both'])->count(),
-                'outdoor' => $venues()->whereIn('indoor_outdoor', ['outdoor', 'both'])->count(),
-                'free' => $venues()->where('free_to_use', true)->count(),
-                'beginners' => $clubs()->where('beginners_welcome', true)->count(),
-                'equipment' => $clubs()->where('equipment_provided', true)->count(),
-                'fees' => $clubs()->whereNotNull('casual_fee_cents')->selectRaw('min(casual_fee_cents) as low, max(casual_fee_cents) as high')->toBase()->first(),
-            ],
-            'pins' => $venues()->whereNotNull('latitude')->whereNotNull('longitude')
-                ->withExists(['clubs' => fn (Builder $query) => $query->visible($drafts)])
-                ->get(['id', 'slug', 'name', 'suburb', 'latitude', 'longitude']),
-            'areas' => $area ? collect() : $this->areas($state, $drafts),
-            'sessions' => $clubs()->whereNotNull('session_times_text')
-                ->with(['venues' => fn ($query) => $query->visible($drafts)->orderByDesc('club_venue.is_primary')])
-                ->orderByDesc('beginners_welcome')->orderBy('name')
-                ->limit(4)->get(),
-            'venues' => $venues()->orderByRaw('court_count desc nulls last')->orderBy('name')->limit(8)->get(),
-            'biggest' => $venues()->whereNotNull('court_count')->orderByDesc('court_count')->limit(3)->get(['name', 'suburb']),
-            'clubs' => $clubs()->withCount($clubCounts)
-                ->with(['venues' => fn ($query) => $query->visible($drafts)->orderByDesc('club_venue.is_primary')])
-                ->orderByDesc('profile_tier')->orderBy('name')
-                ->limit(6)->get(),
-            'coaches' => SampleCoaches::all()->take(3),
-            'states' => $this->stateCounts($drafts),
-        ]);
+        return redirect()->to($area->url($request->boolean('drafts') ? ['drafts' => 1] : []), 301);
     }
 
     public function clubs(Request $request): View
@@ -166,7 +131,9 @@ class ExploreController extends Controller
         $filters = [
             'q' => $request->string('q')->trim()->limit(100, '')->value() ?: null,
             'state' => $state,
-            'area' => $state ? $this->area($request) : null,
+            'city' => $state ? $this->text($request, 'city') : null,
+            'council' => $state ? $this->text($request, 'council') : null,
+            'suburb' => $state ? $this->text($request, 'suburb') : null,
             'level' => array_key_exists((string) $request->query('level'), Club::LEVELS) ? $request->query('level') : null,
             'beginners' => $request->boolean('beginners'),
             'coaching' => $request->boolean('coaching'),
@@ -187,6 +154,7 @@ class ExploreController extends Controller
             'drafts' => $drafts,
             'canPreview' => $this->canPreview($request),
             'results' => $results->withQueryString(),
+            'area' => $this->areaOf($filters),
         ]);
     }
 
@@ -195,7 +163,7 @@ class ExploreController extends Controller
         $query = Club::query()
             ->visible($drafts)
             ->search($filters['q'])
-            ->inArea($filters['state'], $filters['area'])
+            ->tap(fn (Builder $query) => $this->areaOf($filters)->scope($query))
             ->withCount(['venues' => fn (Builder $query) => $query->visible($drafts)])
             ->when($filters['level'], fn (Builder $query, string $level) => $query->whereJsonContains('levels', $level))
             ->when($filters['beginners'], fn (Builder $query) => $query->where('beginners_welcome', true))
@@ -221,7 +189,7 @@ class ExploreController extends Controller
         $query = Venue::query()
             ->visible($drafts)
             ->search($filters['q'])
-            ->inArea($filters['state'], $filters['area'])
+            ->tap(fn (Builder $query) => $this->areaOf($filters)->scope($query))
             ->withCount(['clubs' => fn (Builder $query) => $query->visible($drafts)])
             ->when($filters['setting'], fn (Builder $query, string $setting) => $query->whereIn('indoor_outdoor', $setting === 'both' ? ['both'] : [$setting, 'both']))
             ->when($filters['lights'], fn (Builder $query) => $query->where('lights', true))
@@ -232,50 +200,6 @@ class ExploreController extends Controller
         }
 
         return $query->orderBy('name')->paginate(self::PER_PAGE);
-    }
-
-    /**
-     * The places to browse within the page's area: states across Australia, then
-     * cities, council areas or suburbs within a state, whichever the data has.
-     *
-     * @return Collection<int, object{name: string, label: string, venues: int, clubs: int, kind: string}>
-     */
-    private function areas(?string $state, bool $drafts): Collection
-    {
-        if (! $state) {
-            return $this->stateCounts($drafts)->map(fn (object $row) => (object) [...(array) $row, 'name' => $row->state, 'label' => Venue::STATE_NAMES[$row->state], 'kind' => 'state']);
-        }
-
-        $column = collect(['city', 'council', 'suburb'])->first(fn (string $column) => Venue::query()->visible($drafts)->where('state', $state)->whereNotNull($column)->exists()) ?? 'suburb';
-        $count = fn (string $model) => $model::query()->visible($drafts)->where('state', $state)->whereNotNull($column)
-            ->groupBy($column)->selectRaw("{$column} as name, count(*) as total")->pluck('total', 'name');
-
-        $venues = $count(Venue::class);
-        $clubs = $count(Club::class);
-
-        return $venues->sortDesc()->take(8)->map(fn ($total, $name) => (object) [
-            'name' => $name,
-            'label' => $name,
-            'venues' => (int) $total,
-            'clubs' => (int) ($clubs[$name] ?? 0),
-            'kind' => $column,
-        ])->values();
-    }
-
-    /** @return Collection<int, object{state: string, venues: int, clubs: int}> */
-    private function stateCounts(bool $drafts): Collection
-    {
-        $count = fn (string $model) => $model::query()->visible($drafts)->whereNotNull('state')
-            ->groupBy('state')->selectRaw('state, count(*) as total')->pluck('total', 'state');
-
-        $venues = $count(Venue::class);
-        $clubs = $count(Club::class);
-
-        return collect(Venue::STATES)
-            ->map(fn (string $state) => (object) ['state' => $state, 'venues' => (int) ($venues[$state] ?? 0), 'clubs' => (int) ($clubs[$state] ?? 0)])
-            ->filter(fn (object $row) => $row->venues || $row->clubs)
-            ->sortByDesc('venues')
-            ->values();
     }
 
     /**
@@ -319,9 +243,52 @@ class ExploreController extends Controller
         return in_array($state, Venue::STATES) ? $state : null;
     }
 
-    private function area(Request $request): ?string
+    private function text(Request $request, string $key): ?string
     {
-        return $request->string('area')->trim()->limit(60, '')->value() ?: null;
+        return $request->string($key)->trim()->limit(100, '')->value() ?: null;
+    }
+
+    /**
+     * The area the list filters describe. ?council=Banyule on its own is fine:
+     * the levels above it are filled from a listing or suburb that has it.
+     */
+    private function areaOf(array $filters): Area
+    {
+        ['state' => $state, 'city' => $city, 'council' => $council, 'suburb' => $suburb] = $filters;
+
+        if ($state && (! $city && ($council || $suburb) || ! $council && $suburb)) {
+            $column = $suburb ? 'suburb' : 'council';
+            $match = collect([Venue::class, Club::class, Locality::class])->map(fn (string $model) => $model::query()
+                ->where('state', $state)->whereRaw("lower({$column}) = ?", [mb_strtolower($suburb ?? $council)])
+                ->whereNotNull('city')->first(['city', 'council']))->filter()->first();
+            $city ??= $match?->city;
+            $council ??= $match?->council;
+        }
+
+        return Area::make($state, $city, $council, $suburb);
+    }
+
+    /**
+     * The old ?state=VIC&area=Echuca links: the area could be a city, council or
+     * suburb, so look for a listing that has it.
+     */
+    private function legacyArea(Request $request): Area
+    {
+        $state = $this->state($request);
+        $name = $state ? $this->text($request, 'area') : null;
+        if (! $name) {
+            return $state ? Area::make($state) : Area::australia();
+        }
+
+        foreach (['city', 'council', 'suburb'] as $level) {
+            $listing = Venue::query()->where('state', $state)->whereRaw("lower({$level}) = ?", [mb_strtolower($name)])->first()
+                ?? Club::query()->where('state', $state)->whereRaw("lower({$level}) = ?", [mb_strtolower($name)])->first();
+            if ($listing && ($level === 'city' || $listing->city) && ($level !== 'suburb' || $listing->council)) {
+                return Area::make($state, $listing->city, $level === 'city' ? null : $listing->council, $level === 'suburb' ? $listing->suburb : null);
+            }
+        }
+
+        return Area::make($state);
     }
 
     /** The values of a multi-choice query parameter that are among $allowed's keys. */

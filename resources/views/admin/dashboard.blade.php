@@ -38,6 +38,49 @@
         </a>
     </div>
 
+    @if ($directory)
+        @php($located = $directory['locations']['total'] ? round($directory['locations']['complete'] / $directory['locations']['total'] * 100) : 0)
+        <h2 class="mt-5 text-sm font-semibold text-slate-500">Directory</h2>
+        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <a href="{{ route('admin.venues.index') }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Venues</p>
+                    <x-icon name="map-pin" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($directory['venues']) }}</p>
+                <p class="mt-0.5 text-xs text-brand-600">{{ number_format($directory['venuesLive']) }} published</p>
+            </a>
+            <a href="{{ route('admin.clubs.index') }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Clubs</p>
+                    <x-icon name="users" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($directory['clubs']) }}</p>
+                <p class="mt-0.5 text-xs text-brand-600">{{ number_format($directory['clubsLive']) }} published</p>
+            </a>
+            <a href="{{ route('admin.locations') }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Location pages ready</p>
+                    <x-icon name="globe" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ $located }}%</p>
+                <p @class(['mt-0.5 text-xs', 'text-emerald-600' => $located >= 95, 'text-amber-600' => $located < 95])>
+                    Venues with state, city, council and suburb
+                </p>
+            </a>
+            <a href="{{ route('admin.reports.index') }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Reports to check</p>
+                    <x-icon name="megaphone" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($directory['openReports']) }}</p>
+                <p @class(['mt-0.5 text-xs', 'text-amber-600' => $directory['openReports'], 'text-brand-600' => ! $directory['openReports']])>
+                    {{ $directory['openReports'] ? 'Courts and fixes from visitors' : 'Nothing waiting' }}
+                </p>
+            </a>
+        </div>
+    @endif
+
     <div class="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {{-- Recent activity --}}
         <section class="card min-w-0 p-4 sm:p-5">

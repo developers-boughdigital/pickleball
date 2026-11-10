@@ -95,6 +95,41 @@ class Club extends Model
         return collect($this->levels ?? [])->map(fn (string $level) => self::LEVELS[$level] ?? $level)->implode(', ');
     }
 
+    /**
+     * The days the session text mentions, in week order: "Mon to Fri and Sun"
+     * gives Mon, Tue, Wed, Thu, Fri, Sun. Empty until sessions are real records.
+     *
+     * @return list<string>
+     */
+    public function sessionDays(): array
+    {
+        $week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        // A whole word only, so "month" and "sunshine" don't count.
+        $day = '(mon|tue|wed|thu|fri|sat|sun)(?:day|sday|nesday|r|rs|rsday|urday)?s?';
+        $text = mb_strtolower((string) $this->session_times_text);
+        $found = [];
+
+        // Ranges first: "Mon to Fri", "Mon–Fri", "Monday - Friday".
+        preg_match_all("/\b{$day}\s*(?:to|-|–|—)\s*{$day}\b/u", $text, $ranges, PREG_SET_ORDER);
+        foreach ($ranges as [, $from, $to]) {
+            $start = array_search(ucfirst($from), $week);
+            $end = array_search(ucfirst($to), $week);
+            for ($i = $start; $i !== false && $end !== false; $i = ($i + 1) % 7) {
+                $found[$week[$i]] = true;
+                if ($i === $end) {
+                    break;
+                }
+            }
+        }
+
+        preg_match_all("/\b{$day}\b/u", $text, $single);
+        foreach ($single[1] as $short) {
+            $found[ucfirst($short)] = true;
+        }
+
+        return array_values(array_filter($week, fn (string $day) => isset($found[$day])));
+    }
+
     public function location(): string
     {
         return collect([$this->suburb, trim("{$this->state} {$this->postcode}")])->filter()->implode(', ');

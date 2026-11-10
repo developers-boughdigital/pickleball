@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Locality;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -77,6 +78,11 @@ trait DirectoryListing
             if ($listing->status === 'published' && $listing->record_status !== 'checked') {
                 $listing->status = 'draft';
             }
+
+            // Location pages need city and council; fill them from the postcode when they're blank.
+            if ($listing->isDirty(['postcode', 'suburb', 'city', 'council']) || ! $listing->exists) {
+                Locality::fillListing($listing);
+            }
         });
     }
 
@@ -135,17 +141,6 @@ trait DirectoryListing
     public function scopeVisible(Builder $query, bool $drafts = false): void
     {
         $query->when(! $drafts, fn (Builder $query) => $query->where($this->qualifyColumn('status'), 'published'));
-    }
-
-    /** Listings in a state and, optionally, a city, council area or suburb within it. */
-    public function scopeInArea(Builder $query, ?string $state, ?string $area = null): void
-    {
-        $query
-            ->when($state, fn (Builder $query) => $query->where($this->qualifyColumn('state'), $state))
-            ->when($area, fn (Builder $query) => $query->where(fn (Builder $query) => $query
-                ->whereLike($this->qualifyColumn('city'), $area)
-                ->orWhereLike($this->qualifyColumn('council'), $area)
-                ->orWhereLike($this->qualifyColumn('suburb'), $area)));
     }
 
     /** Distance in km from the squared-degrees value the explore page sorts by. */

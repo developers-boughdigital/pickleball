@@ -1,5 +1,5 @@
 {{-- Layout for the public site, in the style of design/Dink Circle City page and Coach index.html. --}}
-@props(['title' => null, 'description' => null])
+@props(['title' => null, 'description' => null, 'canonical' => null, 'noindex' => false, 'head' => null])
 
 <!DOCTYPE html>
 <html lang="en-AU">
@@ -10,6 +10,13 @@
     @if ($description)
         <meta name="description" content="{{ $description }}">
     @endif
+    @if ($canonical)
+        <link rel="canonical" href="{{ $canonical }}">
+    @endif
+    @if ($noindex)
+        <meta name="robots" content="noindex">
+    @endif
+    {{ $head }}
     @if (config('app.logo'))
         <link rel="icon" href="{{ asset(config('app.logo')) }}">
     @endif

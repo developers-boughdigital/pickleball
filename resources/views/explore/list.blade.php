@@ -7,7 +7,8 @@
     $url = fn (array $changes = []) => route($route, array_filter([...request()->except('page'), ...$changes], fn ($value) => filled($value) && $value !== false));
     $noun = $tab === 'clubs' ? 'club' : 'venue';
     $active = collect($filters)->filter()->isNotEmpty();
-    $place = $filters['area'] ?? ($filters['state'] ? Venue::STATE_NAMES[$filters['state']] : null);
+    $place = $area->level() === 'australia' ? null : $area->name();
+    $here = $area->query();
     $title = $tab === 'clubs' ? 'Pickleball clubs' : 'Courts and venues';
 @endphp
 
@@ -32,17 +33,18 @@
         @change="$event.target.type !== 'search' && $el.requestSubmit()"
     >
         @if ($drafts) <input type="hidden" name="drafts" value="1"> @endif
-        @if ($filters['area']) <input type="hidden" name="area" value="{{ $filters['area'] }}"> @endif
+        @foreach (['city', 'council', 'suburb'] as $level)
+            @if ($filters[$level]) <input type="hidden" name="{{ $level }}" value="{{ $filters[$level] }}" data-area> @endif
+        @endforeach
         <input type="hidden" name="lat" x-ref="lat" value="{{ $near['lat'] ?? '' }}">
         <input type="hidden" name="lng" x-ref="lng" value="{{ $near['lng'] ?? '' }}">
 
         <section class="border-b border-line bg-white">
             <div class="site-wrap pt-6 pb-8">
                 <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
-                    <a href="{{ route('explore', $drafts ? ['drafts' => 1] : []) }}" class="site-link font-normal">Play</a><span aria-hidden="true">›</span>
-                    @if ($filters['state'])
-                        <a href="{{ route('explore', array_filter(['state' => $filters['state'], 'area' => $filters['area'], 'drafts' => $drafts ? 1 : null])) }}" class="site-link font-normal">{{ $place }}</a><span aria-hidden="true">›</span>
-                    @endif
+                    @foreach ($area->trail() as $step)
+                        <a href="{{ $step->url($drafts ? ['drafts' => 1] : []) }}" class="site-link font-normal">{{ $step->level() === 'australia' ? 'Play' : $step->name() }}</a><span aria-hidden="true">›</span>
+                    @endforeach
                     <span class="font-bold text-navy">{{ $tab === 'clubs' ? 'Clubs' : 'Venues' }}</span>
                 </nav>
 
@@ -69,7 +71,7 @@
 
                 <nav class="mt-6 flex flex-wrap gap-2" aria-label="What to explore">
                     @foreach (['clubs' => 'Clubs', 'venues' => 'Venues'] as $key => $label)
-                        <a href="{{ route("explore.{$key}", array_filter(['q' => $filters['q'], 'state' => $filters['state'], 'area' => $filters['area'], 'lat' => $near['lat'] ?? null, 'lng' => $near['lng'] ?? null, 'drafts' => $drafts ? 1 : null])) }}"
+                        <a href="{{ route("explore.{$key}", array_filter(['q' => $filters['q'], ...$here, 'lat' => $near['lat'] ?? null, 'lng' => $near['lng'] ?? null, 'drafts' => $drafts ? 1 : null])) }}"
                             @class(['site-chip', 'site-chip-on' => $tab === $key]) @if ($tab === $key) aria-current="page" @endif>{{ $label }}</a>
                     @endforeach
                     <a href="{{ route('explore.coaches') }}" class="site-chip">Coaches</a>
@@ -94,7 +96,7 @@
             <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="State">
                 @foreach (['' => 'All states', ...array_combine(Venue::STATES, Venue::STATES)] as $value => $label)
                     <label class="site-chip has-checked:border-court has-checked:bg-court-soft has-checked:text-court-deep has-focus-visible:ring-2 has-focus-visible:ring-court">
-                        <input type="radio" name="state" value="{{ $value }}" @checked((string) $filters['state'] === (string) $value) class="sr-only">
+                        <input type="radio" name="state" value="{{ $value }}" @checked((string) $filters['state'] === (string) $value) @change="$root.querySelectorAll('[data-area]').forEach((el) => el.remove())" class="sr-only">
                         {{ $label }}
                     </label>
                 @endforeach
@@ -146,7 +148,7 @@
     <div class="site-wrap pb-16">
         <p class="text-lg">
             <span class="font-display text-[28px] font-bold">{{ number_format($results->total()) }} {{ str($noun)->plural($results->total()) }}</span>
-            @if ($filters['area']) <span class="text-muted">in {{ $filters['area'] }}</span> @endif
+            @if ($filters['city'] || $filters['council'] || $filters['suburb']) <span class="text-muted">in {{ $place }}</span> @endif
             @if ($near)
                 <span class="text-muted">· nearest first ·</span> <a href="{{ $url(['lat' => null, 'lng' => null]) }}" class="site-link">Stop using my location</a>
             @endif

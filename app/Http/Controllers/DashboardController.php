@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Club;
+use App\Models\ListingReport;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Venue;
+use App\Support\Geography;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -32,6 +36,15 @@ class DashboardController extends Controller
                 'eventsToday' => ActivityLog::where('created_at', '>=', today())->count(),
                 'failedToday' => ActivityLog::where('created_at', '>=', today())->where('succeeded', false)->count(),
             ],
+            // The directory at this stage: what's live, and whether location pages have what they need.
+            'directory' => $request->user()->canAny(['venues.view', 'clubs.view']) ? [
+                'venues' => Venue::count(),
+                'venuesLive' => Venue::where('status', 'published')->count(),
+                'clubs' => Club::count(),
+                'clubsLive' => Club::where('status', 'published')->count(),
+                'locations' => Geography::coverage()['venues'],
+                'openReports' => ListingReport::where('status', 'open')->count(),
+            ] : null,
             'recentActivity' => ActivityLog::with('user')->latest('created_at')->latest('id')->take(6)->get(),
             'newestUsers' => User::with('roles')->latest()->take(5)->get(),
             'roles' => Role::withCount('users')->orderByDesc('users_count')->orderBy('id')->get(),

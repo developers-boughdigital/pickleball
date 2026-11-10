@@ -54,7 +54,7 @@
         <section class="border-b border-line bg-white">
             <div class="site-wrap pt-6 pb-8">
                 <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
-                    <a href="{{ route('explore') }}" class="site-link font-normal">Play</a><span aria-hidden="true">›</span>
+                    <a href="{{ route('play') }}" class="site-link font-normal">Play</a><span aria-hidden="true">›</span>
                     <span class="font-bold text-navy">Coaches</span>
                 </nav>
                 <div class="mt-5 flex flex-wrap items-end gap-8">

@@ -107,7 +107,7 @@ class ExploreTest extends TestCase
         $this->act->venues()->attach(Venue::firstWhere('name', 'Secret Draft Venue'));
 
         $this->get('/explore/clubs/pickleball-act')->assertDontSee('Secret Draft Venue');
-        $this->get('/explore?drafts=1')->assertDontSee('Secret Draft Club');
+        $this->get('/play?drafts=1')->assertDontSee('Secret Draft Club');
         $this->get('/explore/clubs/secret-draft-club?drafts=1')->assertNotFound();
     }
 
@@ -116,48 +116,26 @@ class ExploreTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->actingAs(User::factory()->create()->assignRole(Role::SUPER_ADMIN));
 
-        $this->get('/explore')->assertSee('Preview drafts')->assertDontSee('Secret Draft Club');
-        $this->get('/explore?drafts=1')->assertSee('Previewing drafts')->assertSee('Secret Draft Club')->assertSee('Draft');
+        $this->get('/play')->assertSee('Preview drafts')->assertDontSee('Secret Draft Club');
+        $this->get('/play?drafts=1')->assertSee('Previewing drafts')->assertSee('Secret Draft Club')->assertSee('Draft');
         $this->get('/explore/clubs/secret-draft-club?drafts=1')->assertOk();
         $this->get('/explore/venues/secret-draft-venue?drafts=1')->assertOk();
-    }
-
-    public function test_area_page_counts_and_lists_the_area(): void
-    {
-        $this->get('/explore')->assertOk()
-            ->assertSee('Pickleball in Australia')
-            ->assertSee('Browse by state')
-            ->assertSee('Pickledome')
-            ->assertSee('Pickleball ACT')
-            ->assertSee('Tue 7–9pm all levels')
-            ->assertDontSee('Secret Draft');
-
-        $this->get('/explore?state=act')->assertOk()
-            ->assertSee('Pickleball in Australian Capital Territory')
-            ->assertSee('Browse by suburb')
-            ->assertSee('Pickledome')
-            ->assertDontSee('Darwin Waterfront')
-            ->assertDontSee('Top End Dinkers');
-
-        $this->get('/explore?state=NT&area=Darwin+City')->assertOk()
-            ->assertSee('Pickleball in Darwin City')
-            ->assertSee('Darwin Waterfront')
-            ->assertDontSee('Top End Dinkers'); // the club's suburb is Darwin, not Darwin City
-
-        // An area needs a state, and a made-up state is ignored.
-        $this->get('/explore?area=Darwin+City')->assertSee('Pickleball in Australia');
-        $this->get('/explore?state=XX')->assertSee('Pickleball in Australia');
     }
 
     public function test_old_explore_links_go_to_the_lists(): void
     {
         $this->get('/explore?tab=venues&state=NT')->assertRedirect('/explore/venues?state=NT');
         $this->get('/explore?q=act')->assertRedirect('/explore/clubs?q=act');
+
+        // The area page moved to /play, permanently.
+        $this->get('/explore')->assertStatus(301)->assertRedirect('/play');
+        $this->get('/explore?state=nt')->assertStatus(301)->assertRedirect('/play/nt');
+        $this->get('/explore?state=XX')->assertRedirect('/play');
     }
 
     public function test_lists_filter_by_area_and_fees(): void
     {
-        $this->get('/explore/clubs?state=ACT&area=belconnen')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
+        $this->get('/explore/clubs?state=ACT&suburb=belconnen')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
         $this->get('/explore/clubs?max_fee=15')->assertSee('Pickleball ACT')->assertDontSee('Top End Dinkers');
         $this->get('/explore/clubs?max_fee=10')->assertDontSee('Pickleball ACT');
     }
@@ -184,6 +162,6 @@ class ExploreTest extends TestCase
         Club::query()->update(['status' => 'draft']);
         Venue::query()->update(['status' => 'draft']);
 
-        $this->get('/explore')->assertOk()->assertSee('No clubs listed yet.')->assertSee('Check back soon');
+        $this->get('/play')->assertOk()->assertSee('No clubs listed yet.')->assertSee('Check back soon');
     }
 }

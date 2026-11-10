@@ -10,6 +10,8 @@
         ]],
         ['label' => 'Venues', 'short' => 'Venues', 'icon' => 'map-pin', 'rail' => 'map-pin', 'route' => 'admin.venues.index', 'active' => ['admin.venues.*'], 'can' => 'venues.view'],
         ['label' => 'Clubs', 'short' => 'Clubs', 'icon' => 'users', 'rail' => 'users', 'route' => 'admin.clubs.index', 'active' => ['admin.clubs.*'], 'can' => 'clubs.view'],
+        ['label' => 'Locations', 'short' => 'Places', 'icon' => 'globe', 'rail' => 'globe', 'route' => 'admin.locations', 'active' => ['admin.locations*'], 'can' => 'venues.view'],
+        ['label' => 'Reports', 'short' => 'Reports', 'icon' => 'megaphone', 'rail' => 'megaphone', 'route' => 'admin.reports.index', 'active' => ['admin.reports.*'], 'can' => 'venues.view'],
         ['label' => 'Import', 'short' => 'Import', 'icon' => 'upload', 'rail' => 'upload', 'route' => 'admin.import', 'active' => ['admin.import*'], 'can' => ['venues.import', 'clubs.import']],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings', 'route' => 'admin.settings', 'active' => ['admin.settings*'], 'can' => 'settings.view'],
         ['label' => 'Database', 'short' => 'Database', 'icon' => 'database', 'rail' => 'database', 'route' => 'admin.database', 'active' => ['admin.database*'], 'role' => \App\Models\Role::SUPER_ADMIN],

@@ -2,7 +2,7 @@
 @php
     $nav = [
         'home' => ['Home', request()->routeIs('home')],
-        'explore' => ['Play', request()->routeIs('explore')],
+        'play' => ['Play', request()->routeIs('play', 'play.*')],
         'explore.clubs' => ['Clubs', request()->routeIs('explore.clubs', 'explore.club')],
         'explore.venues' => ['Venues', request()->routeIs('explore.venues', 'explore.venue')],
         'explore.coaches' => ['Coaches', request()->routeIs('explore.coaches')],

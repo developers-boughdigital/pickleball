@@ -3,7 +3,9 @@
     use App\Models\Venue;
 
     $keep = $drafts ? ['drafts' => 1] : [];
-    $here = array_filter(['state' => $state, 'area' => $area]);
+    $here = $area->query();
+    $level = $area->level();
+    $km = fn (?float $distance) => $distance === null ? null : (($k = sqrt($distance) * 111.32) < 10 ? number_format($k, 1) : number_format($k)).' km';
     $dollars = fn (int $cents) => '$'.number_format($cents / 100, $cents % 100 ? 2 : 0);
     $plural = fn (int $count, string $word) => number_format($count).' '.str($word)->plural($count);
 
@@ -24,12 +26,21 @@
         ]);
     $pinSize = $spots->count() > 150 ? 'size-3 border-2' : 'size-5 border-[3px]';
 
-    $areaHeading = match ($areas->first()?->kind) {
+    $areaHeading = [
         'state' => 'Browse by state',
-        'city' => 'Browse by city',
+        'city' => 'Browse by city or region',
         'council' => 'Browse by council area',
-        default => 'Browse by suburb',
-    };
+        'suburb' => 'Browse by suburb',
+    ][$area->childLevel()] ?? null;
+    $thin = $level !== 'australia' && $stats['venues'] < 3;
+    $parent = $area->parent();
+
+    // Structured data for search engines (brief: BreadcrumbList, ItemList of venues, FAQPage).
+    $schema = [
+        ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => collect([['Home', route('home')], ...collect($area->trail())->map(fn ($step) => [$step->level() === 'australia' ? 'Play' : $step->name(), $step->url()])])
+            ->values()->map(fn ($crumb, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $crumb[0], 'item' => $crumb[1]])->all()],
+        ['@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => "Pickleball venues in {$place}", 'itemListElement' => $venues->values()->map(fn ($venue, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => route('explore.venue', $venue), 'name' => $venue->name])->all()],
+    ];
     $avatars = ['bg-court text-white', 'bg-gum text-navy', 'bg-court-deep text-white', 'bg-ball text-navy'];
     $initials = fn (string $name) => collect(preg_split('/\s+/', preg_replace('/[^\pL\s]/u', '', $name)))
         ->reject(fn ($word) => in_array(strtolower($word), ['the', 'and', 'of', 'inc', 'club', 'pickleball', '']))
@@ -62,29 +73,38 @@
             'Clubs list their sessions by level, from New to Open. If you are unsure, start with a beginner or come and try session and ask the club where you fit.',
         ],
     ]);
+    $schema[] = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => collect($faq)->values()->map(fn ($qa) => ['@type' => 'Question', 'name' => $qa[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $qa[1]]])->all()];
 @endphp
 
-<x-site :title="'Pickleball in '.$place" :description="'Pickleball in '.$place.': '.$plural($stats['venues'], 'venue').' and '.$plural($stats['clubs'], 'club').', with courts, sessions, fees and coaches.'">
+<x-site :title="'Pickleball in '.$place" :description="'Pickleball in '.$place.': '.$plural($stats['venues'], 'venue').' and '.$plural($stats['clubs'], 'club').', with courts, sessions, fees and coaches.'" :canonical="$area->url()" :noindex="$drafts">
+    <x-slot:head>
+        @foreach ($schema as $block)
+            <script type="application/ld+json">{!! json_encode($block, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+        @endforeach
+    </x-slot:head>
+
     {{-- Hero --}}
     <section class="border-b border-line bg-white">
         <div class="site-wrap pt-6 pb-10">
             <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
                 <a href="{{ route('home') }}" class="site-link font-normal">Home</a><span aria-hidden="true">›</span>
-                @if ($state)
-                    <a href="{{ route('explore', $keep) }}" class="site-link font-normal">Play</a><span aria-hidden="true">›</span>
-                    @if ($area)
-                        <a href="{{ route('explore', ['state' => $state, ...$keep]) }}" class="site-link font-normal">{{ Venue::STATE_NAMES[$state] }}</a><span aria-hidden="true">›</span>
+                @foreach ($area->trail() as $step)
+                    @if ($loop->last)
+                        <span class="font-bold text-navy" aria-current="page">{{ $step->level() === 'australia' ? 'Play' : $step->name() }}</span>
+                    @else
+                        <a href="{{ $step->url($keep) }}" class="site-link font-normal">{{ $step->level() === 'australia' ? 'Play' : $step->name() }}</a><span aria-hidden="true">›</span>
                     @endif
-                @endif
-                <span class="font-bold text-navy">{{ $state ? $place : 'Play' }}</span>
+                @endforeach
             </nav>
 
             <div class="mt-5 flex flex-wrap items-end gap-10">
                 <div class="min-w-0 flex-[1_1_520px]">
                     <h1 class="font-display text-[40px] leading-[44px] font-bold sm:text-5xl sm:leading-[52px]">Pickleball in {{ $place }}</h1>
                     <p class="mt-4 max-w-[640px] text-lg leading-7 text-muted">
-                        {{ $place }} has {{ $plural($stats['venues'], 'pickleball venue') }} and {{ $plural($stats['clubs'], 'club') }}.
-                        @if ($stats['venues'] && $stats['indoor'] * 2 > $stats['venues'])
+                        {{ $place }} has {{ $plural($stats['venues'], 'pickleball venue') }} and {{ $plural($stats['clubs'], 'club') }}{{ $stats['withSessions'] ? ', '.$stats['withSessions'].' of them with weekly session times' : '' }}.
+                        @if ($radius)
+                            That includes venues within {{ $radius }} km of {{ $place }}.
+                        @elseif ($stats['venues'] && $stats['indoor'] * 2 > $stats['venues'])
                             Most courts are indoor, so you can play all year.
                         @elseif ($stats['beginners'])
                             {{ $plural($stats['beginners'], 'club') }} welcome beginners.
@@ -147,7 +167,7 @@
                         You’re signed in as an admin. Visitors see published listings only.
                     @endif
                 </span>
-                <a href="{{ route('explore', [...$here, ...($drafts ? [] : ['drafts' => 1])]) }}" class="site-link">{{ $drafts ? 'Show only published' : 'Preview drafts' }}</a>
+                <a href="{{ $area->url($drafts ? [] : ['drafts' => 1]) }}" class="site-link">{{ $drafts ? 'Show only published' : 'Preview drafts' }}</a>
             </div>
         </div>
     @endif
@@ -198,24 +218,29 @@
             </div>
 
             <div class="min-w-0 flex-[2_1_340px]">
-                @if ($areas->isNotEmpty())
+                @if ($children->isNotEmpty())
                     <h2 class="site-h2 mb-4">{{ $areaHeading }}</h2>
-                    <ul class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-                        @foreach ($areas as $row)
-                            <li>
-                                <a href="{{ route('explore', [...($row->kind === 'state' ? ['state' => $row->name] : ['state' => $state, 'area' => $row->name]), ...$keep]) }}" class="site-card block px-4 py-3.5 text-navy no-underline transition hover:shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
-                                    <span class="site-h3 block text-court">{{ $row->kind === 'state' ? $row->name : $row->label }}</span>
+                    <ul class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3" x-data="{ all: false }">
+                        @foreach ($children as $row)
+                            <li @if ($loop->index >= 12) x-show="all" x-cloak @endif>
+                                <a href="{{ $row->area->url($keep) }}" class="site-card block px-4 py-3.5 text-navy no-underline transition hover:shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
+                                    <span class="site-h3 block text-court">{{ $row->area->level() === 'state' ? $row->area->state : $row->area->name() }}</span>
                                     <span class="text-muted">{{ $plural($row->venues, 'venue') }}@if ($row->clubs) · {{ $plural($row->clubs, 'club') }}@endif</span>
                                 </a>
                             </li>
                         @endforeach
+                        @if ($children->count() > 12)
+                            <li class="col-span-full" x-show="! all"><button type="button" class="site-link inline-flex min-h-11 items-center" @click="all = true">Show all {{ $children->count() }}</button></li>
+                        @endif
                     </ul>
-                    <a href="{{ route('explore.venues', [...$here, ...$keep]) }}" class="site-link mt-2 inline-flex min-h-11 items-center">See every venue{{ $state ? ' in '.Venue::STATE_NAMES[$state] : '' }}</a>
-                @elseif ($area)
+                    <a href="{{ route('explore.venues', [...$here, ...$keep]) }}" class="site-link mt-2 inline-flex min-h-11 items-center">See every venue in {{ $place }}</a>
+                @else
                     <h2 class="site-h2 mb-4">Around {{ $place }}</h2>
                     <div class="site-card p-6">
-                        <p class="text-muted">{{ $plural($stats['venues'], 'venue') }} and {{ $plural($stats['clubs'], 'club') }} list {{ $place }} as their suburb, city or council area.</p>
-                        <a href="{{ route('explore', ['state' => $state, ...$keep]) }}" class="site-btn-outline mt-4">All of {{ Venue::STATE_NAMES[$state] }}</a>
+                        <p class="text-muted">{{ $plural($stats['venues'], 'venue') }} and {{ $plural($stats['clubs'], 'club') }}{{ $radius ? " in or within {$radius} km of {$place}" : " in {$place}" }}.</p>
+                        @if ($parent)
+                            <a href="{{ $parent->url($keep) }}" class="site-btn-outline mt-4">All of {{ $parent->name() }}</a>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -281,7 +306,7 @@
                 <table class="w-full min-w-[820px] border-collapse text-left">
                     <thead>
                         <tr class="border-b-2 border-line text-muted">
-                            @foreach (['Venue', 'Suburb', 'Indoor or outdoor', 'Courts', 'Surface', 'Lights', 'Price'] as $heading)
+                            @foreach (['Venue', 'Suburb', 'Indoor or outdoor', 'Courts', 'Surface', 'Lights', 'Price', ...($showDistance ? ['Distance'] : [])] as $heading)
                                 <th scope="col" class="px-4 py-3 font-bold">{{ $heading }}</th>
                             @endforeach
                         </tr>
@@ -306,13 +331,40 @@
                                 @else
                                     <td class="px-4 py-3.5 text-muted">Check venue</td>
                                 @endif
+                                @if ($showDistance)
+                                    <td class="px-4 py-3.5 whitespace-nowrap">{{ $km($venue->distanceKm() === null ? null : $venue->distance) ?? '—' }}</td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
         @endif
+        <p class="mt-3 text-muted">Something wrong or missing? <a href="#tell-us" class="site-link">Tell us about a court</a></p>
     </section>
+
+    {{-- Thin area: the nearest venues outside it --}}
+    @if ($thin && $nearest->isNotEmpty())
+        <section class="site-wrap pt-16">
+            <h2 class="site-h2">Courts near {{ $place }}</h2>
+            <p class="mt-2 text-muted">We don’t list many courts in {{ $place }} yet. These are the nearest ones.</p>
+            <ul class="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-4">
+                @foreach ($nearest as $venue)
+                    <li>
+                        <a href="{{ route('explore.venue', [$venue, ...$keep]) }}" class="site-card flex items-center justify-between gap-3 p-5 text-navy no-underline transition hover:shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
+                            <span class="min-w-0">
+                                <span class="site-h3 block text-court">{{ $venue->name }}</span>
+                                <span class="text-muted">{{ $venue->suburb }}{{ $venue->indoor_outdoor ? ' · '.Venue::SETTINGS[$venue->indoor_outdoor] : '' }}</span>
+                            </span>
+                            @if ($venue->distanceKm() !== null)
+                                <span class="shrink-0 font-bold">{{ $km($venue->distance) }}</span>
+                            @endif
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
 
     {{-- Clubs --}}
     <section class="site-wrap pt-16">
@@ -354,7 +406,9 @@
                                 @endforeach
                             </div>
                         @endif
-                        @if ($club->session_times_text)
+                        @if ($days = $club->sessionDays())
+                            <p><span class="font-bold">Plays</span> {{ collect($days)->join(', ', ' and ') }}</p>
+                        @elseif ($club->session_times_text)
                             <p class="line-clamp-2">{{ $club->session_times_text }}</p>
                         @else
                             <p class="text-muted">Session times not listed yet</p>
@@ -433,16 +487,57 @@
         </div>
     </section>
 
-    {{-- Other places --}}
-    <section class="site-wrap pt-16 pb-16">
-        <h2 class="site-h2 mb-4">{{ $state ? 'Other states' : 'Play by state' }}</h2>
-        <div class="flex flex-wrap gap-3">
-            @foreach ($states->where('state', '!=', $state) as $row)
-                <a href="{{ route('explore', ['state' => $row->state, ...$keep]) }}" class="site-chip">{{ Venue::STATE_NAMES[$row->state] }}</a>
-            @endforeach
-            @if ($state)
-                <a href="{{ route('explore', $keep) }}" class="site-chip border-court text-court">All of Australia</a>
-            @endif
-        </div>
+    {{-- Nearby and parent areas --}}
+    @if ($nearby->isNotEmpty() || $parent)
+        <section class="site-wrap pt-16">
+            <h2 class="site-h2 mb-4">{{ $level === 'state' ? 'Other states' : 'Nearby areas' }}</h2>
+            <div class="flex flex-wrap gap-3">
+                @foreach ($nearby as $row)
+                    <a href="{{ $row->area->url($keep) }}" class="site-chip">{{ $row->area->name() }}</a>
+                @endforeach
+                @if ($parent)
+                    <a href="{{ $parent->url($keep) }}" class="site-chip border-court text-court">All of {{ $parent->name() }}</a>
+                @endif
+            </div>
+        </section>
+    @endif
+
+    {{-- Tell us about a court --}}
+    <section id="tell-us" class="site-wrap scroll-mt-6 pt-16 pb-16">
+        @if (session('report_sent'))
+            <div class="rounded-[20px] bg-gum-soft p-6 sm:p-8" role="status">
+                <h2 class="site-h2">Thanks, we’ve got it.</h2>
+                <p class="mt-2 text-lg">We check every message and add the court once we’ve confirmed it.</p>
+            </div>
+        @else
+            <details class="site-card p-6 sm:p-8" @if ($thin || $errors->any()) open @endif>
+                <summary class="site-h2 cursor-pointer list-none">Know a court we’re missing{{ $level === 'australia' ? '' : ' in '.$place }}?</summary>
+                <p class="mt-2 text-muted">Tell us where it is and we’ll add it. You don’t need an account.</p>
+                <form method="POST" action="{{ route('reports.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
+                    @csrf
+                    <input type="hidden" name="kind" value="new_court">
+                    <input type="hidden" name="state" value="{{ $area->state }}">
+                    <input type="hidden" name="area" value="{{ $level === 'australia' ? '' : $place }}">
+                    <div class="hidden" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+                    <div class="flex flex-col gap-1.5 sm:col-span-2">
+                        <label for="details" class="font-bold">Where is the court, and what’s there?</label>
+                        <textarea id="details" name="details" rows="3" required class="site-field min-h-28 py-3" placeholder="For example: 2 outdoor courts with lines at Smith Reserve, Banksia Street">{{ old('details') }}</textarea>
+                        @error('details') <p class="font-bold text-[#b42318]">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="report-name" class="font-bold">Your name <span class="font-normal text-muted">(optional)</span></label>
+                        <input id="report-name" name="name" value="{{ old('name') }}" autocomplete="name" class="site-field">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="report-email" class="font-bold">Email, if we can ask you about it <span class="font-normal text-muted">(optional)</span></label>
+                        <input id="report-email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" class="site-field">
+                        @error('email') <p class="font-bold text-[#b42318]">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button class="site-btn-primary min-h-14 text-lg">Send to the team</button>
+                    </div>
+                </form>
+            </details>
+        @endif
     </section>
 </x-site>

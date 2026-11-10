@@ -14,11 +14,24 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\LocationController as AdminLocationController;
+use App\Http\Controllers\Admin\ListingReportController as AdminListingReportController;
 use App\Http\Controllers\ExploreController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ListingReportController;
+use App\Http\Controllers\LocationController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'home')->name('home');
+Route::get('/', HomeController::class)->name('home');
+
+// Location pages: /play/{state}/{city}/{council}/{suburb}/, each level a real page.
+Route::controller(LocationController::class)->prefix('play')->name('play')->group(function () {
+    Route::get('/', 'hub');
+    Route::get('{state}/{city?}/{council?}/{suburb?}', 'show')->name('.area')->where('state', '[A-Za-z]{2,3}');
+});
+
+Route::post('reports', [ListingReportController::class, 'store'])->middleware('throttle:5,60')->name('reports.store');
 
 // The public directory.
 Route::controller(ExploreController::class)->prefix('explore')->name('explore')->group(function () {
@@ -56,6 +69,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('venues', VenueController::class);
         Route::get('clubs/export', [ClubController::class, 'export'])->name('clubs.export');
         Route::resource('clubs', ClubController::class);
+
+        Route::get('locations', [AdminLocationController::class, 'index'])->middleware('permission:venues.view')->name('locations');
+        Route::post('locations/fill', [AdminLocationController::class, 'fill'])->middleware('permission:venues.update')->name('locations.fill');
+        Route::get('reports', [AdminListingReportController::class, 'index'])->middleware('permission:venues.view')->name('reports.index');
+        Route::patch('reports/{report}', [AdminListingReportController::class, 'update'])->middleware('permission:venues.update')->name('reports.update');
 
         Route::controller(ImportController::class)->group(function () {
             Route::get('import', 'index')->name('import');

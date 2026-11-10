@@ -18,9 +18,9 @@
         <nav aria-label="Play by state" class="flex flex-col gap-2">
             <span class="font-bold">Play</span>
             @foreach (['VIC', 'NSW', 'QLD'] as $state)
-                <a href="{{ route('explore', ['state' => $state]) }}" class="text-[#eef2f8] hover:text-ball">{{ \App\Models\Venue::STATE_NAMES[$state] }}</a>
+                <a href="{{ \App\Support\Area::make($state)->url() }}" class="text-[#eef2f8] hover:text-ball">{{ \App\Models\Venue::STATE_NAMES[$state] }}</a>
             @endforeach
-            <a href="{{ route('explore') }}" class="text-[#eef2f8] hover:text-ball">All states</a>
+            <a href="{{ route('play') }}" class="text-[#eef2f8] hover:text-ball">All states</a>
         </nav>
         <nav aria-label="Find" class="flex flex-col gap-2">
             <span class="font-bold">Find</span>
