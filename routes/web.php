@@ -20,6 +20,8 @@ use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\Admin\SeoController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +32,11 @@ Route::controller(LocationController::class)->prefix('play')->name('play')->grou
     Route::get('/', 'hub');
     Route::get('{state}/{city?}/{council?}/{suburb?}', 'show')->name('.area')->where('state', '[A-Za-z]{2,3}');
 });
+
+// Built from what's published; see SitemapController.
+Route::get('sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('sitemaps/{type}.xml', [SitemapController::class, 'show'])->name('sitemap.type');
+Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 Route::post('reports', [ListingReportController::class, 'store'])->middleware('throttle:5,60')->name('reports.store');
 
@@ -83,6 +90,11 @@ Route::middleware('auth')->group(function () {
             Route::get('import/template/{type}', 'template')->name('import.template');
             Route::get('import/club-venue/export', 'export')->name('import.club-venue-export');
         });
+
+        Route::get('seo', [SeoController::class, 'index'])->middleware('permission:settings.view')->name('seo');
+        Route::post('seo', [SeoController::class, 'store'])->middleware('permission:settings.update')->name('seo.store');
+        Route::put('seo/{pageMeta}', [SeoController::class, 'update'])->middleware('permission:settings.update')->name('seo.update');
+        Route::delete('seo/{pageMeta}', [SeoController::class, 'destroy'])->middleware('permission:settings.update')->name('seo.destroy');
 
         Route::get('settings', [SettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings');
         Route::put('settings', [SettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');

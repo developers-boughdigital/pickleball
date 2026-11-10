@@ -91,6 +91,8 @@ abstract class DirectoryRequest extends FormRequest
             'claim_status' => ['required', Rule::in(array_keys(Venue::CLAIM_STATUSES))],
             'enriched_at' => ['nullable', 'date'],
             'notes' => static::textRule(5000),
+            'meta_title' => static::textRule(70),
+            'meta_description' => static::textRule(170),
             'status' => [
                 'required',
                 Rule::in(array_keys(Venue::STATUSES)),
@@ -123,6 +125,8 @@ abstract class DirectoryRequest extends FormRequest
             'claim_status' => 'Claim status',
             'enriched_at' => 'Date enriched',
             'notes' => 'Notes',
+            'meta_title' => 'Search title',
+            'meta_description' => 'Search description',
             'status' => 'Status',
         ];
     }

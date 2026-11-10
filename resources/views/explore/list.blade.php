@@ -10,9 +10,22 @@
     $place = $area->level() === 'australia' ? null : $area->name();
     $here = $area->query();
     $title = $tab === 'clubs' ? 'Pickleball clubs' : 'Courts and venues';
+
+    // One indexable page per area (and page number); searches and filters are for people, not Google.
+    $canonical = route($route, [...$here, ...($results->currentPage() > 1 ? ['page' => $results->currentPage()] : [])]);
+    $filtered = collect(request()->except(['page', 'state', 'city', 'council', 'suburb']))->filter(fn ($value) => filled($value))->isNotEmpty();
+    $crumbs = [['Home', route('home')], ...collect($area->trail())->map(fn ($step) => [$step->level() === 'australia' ? 'Play' : $step->name(), $step->url()])->all(), [$tab === 'clubs' ? 'Clubs' : 'Venues', $canonical]];
+    $schema = [\App\Support\Seo\Schema::itemList($title.($place ? ' in '.$place : ''), $results->getCollection()->map(fn ($listing) => [
+        'name' => $listing->name,
+        'url' => route($tab === 'clubs' ? 'explore.club' : 'explore.venue', $listing),
+    ]))];
 @endphp
 
-<x-site :title="$title.($place ? ' in '.$place : '')" description="Pickleball clubs and courts across Australia: sessions, levels, fees and where to play.">
+<x-site :title="$title.($place ? ' in '.$place : '').($results->currentPage() > 1 ? ' (page '.$results->currentPage().')' : '')"
+    :description="$tab === 'clubs'
+        ? 'Pickleball clubs'.($place ? ' in '.$place : ' across Australia').': social play, coaching and competition, with levels, session times and fees.'
+        : 'Pickleball courts and venues'.($place ? ' in '.$place : ' across Australia').': indoor halls and outdoor courts, with facilities, prices and how to book.'"
+    :canonical="$canonical" :noindex="$filtered || $drafts" page-type="CollectionPage" :breadcrumbs="$crumbs" :schema="$schema">
     <form
         method="GET"
         action="{{ route($route) }}"
@@ -42,6 +55,7 @@
         <section class="border-b border-line bg-white">
             <div class="site-wrap pt-6 pb-8">
                 <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
+                    <a href="{{ route('home') }}" class="site-link font-normal">Home</a><span aria-hidden="true">›</span>
                     @foreach ($area->trail() as $step)
                         <a href="{{ $step->url($drafts ? ['drafts' => 1] : []) }}" class="site-link font-normal">{{ $step->level() === 'australia' ? 'Play' : $step->name() }}</a><span aria-hidden="true">›</span>
                     @endforeach

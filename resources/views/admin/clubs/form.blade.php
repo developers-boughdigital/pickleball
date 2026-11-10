@@ -166,6 +166,9 @@
             </div>
         </section>
 
+        <x-admin.seo-fields :listing="$club" :default-title="($club->name ?: 'Club name').($club->suburb ? ', '.$club->suburb : '')"
+            :url="$editing ? route('explore.club', $club) : url('explore/clubs/…')" />
+
         <section class="card p-4 sm:p-5">
             <h2 class="mb-3 text-sm font-semibold">Verification & publishing</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

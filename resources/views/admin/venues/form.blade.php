@@ -112,6 +112,9 @@
             </div>
         </section>
 
+        <x-admin.seo-fields :listing="$venue" :default-title="($venue->name ?: 'Venue name').' pickleball courts'.($venue->suburb ? ', '.$venue->suburb : '')"
+            :url="$editing ? route('explore.venue', $venue) : url('explore/venues/…')" />
+
         <section class="card p-4 sm:p-5">
             <h2 class="mb-3 text-sm font-semibold">Verification & publishing</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

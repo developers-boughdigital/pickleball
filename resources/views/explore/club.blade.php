@@ -10,14 +10,23 @@
         'Court hire (per hour)' => $club->money('court_hire_cents'),
     ]);
     $socials = array_filter(['facebook' => 'Facebook', 'instagram' => 'Instagram', 'tiktok' => 'TikTok', 'youtube' => 'YouTube'], fn ($label, $key) => filled($club->getAttribute($key)), ARRAY_FILTER_USE_BOTH);
+
+    $url = route('explore.club', $club);
+    $crumbs = [['Home', route('home')], ['Clubs', route('explore.clubs')], [$club->name, $url]];
+    $schema = [\App\Support\Seo\Schema::club($club, $url, $club->venues, fn ($venue) => route('explore.venue', $venue))];
 @endphp
 
-<x-site :title="$club->name" :description="$club->short_description ?: 'Pickleball club in '.($club->location() ?: 'Australia').'.'">
+<x-site
+    :title="$club->meta_title ?: $club->name.($club->suburb ? ', '.$club->suburb : '')"
+    :description="$club->meta_description ?: ($club->short_description ?: 'Pickleball club in '.($club->location() ?: 'Australia').': when they play, levels, fees and how to join.')"
+    :canonical="$url" :noindex="$club->status !== 'published'" :breadcrumbs="$crumbs" :schema="$schema">
     <section class="border-b border-line bg-white">
         <div class="site-wrap pt-6 pb-8">
-            <a href="{{ $back }}" class="site-link inline-flex items-center gap-1 font-normal">
-                <x-icon name="chevron-left" class="size-4" /> All clubs
-            </a>
+            <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
+                <a href="{{ route('home') }}" class="site-link font-normal">Home</a><span aria-hidden="true">›</span>
+                <a href="{{ $back }}" class="site-link font-normal">Clubs</a><span aria-hidden="true">›</span>
+                <span class="font-bold text-navy" aria-current="page">{{ $club->name }}</span>
+            </nav>
             <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="font-bold text-gum-text">Pickleball club</p>

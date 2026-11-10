@@ -35,12 +35,8 @@
     $thin = $level !== 'australia' && $stats['venues'] < 3;
     $parent = $area->parent();
 
-    // Structured data for search engines (brief: BreadcrumbList, ItemList of venues, FAQPage).
-    $schema = [
-        ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => collect([['Home', route('home')], ...collect($area->trail())->map(fn ($step) => [$step->level() === 'australia' ? 'Play' : $step->name(), $step->url()])])
-            ->values()->map(fn ($crumb, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $crumb[0], 'item' => $crumb[1]])->all()],
-        ['@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => "Pickleball venues in {$place}", 'itemListElement' => $venues->values()->map(fn ($venue, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => route('explore.venue', $venue), 'name' => $venue->name])->all()],
-    ];
+    // The same trail as the breadcrumb on the page.
+    $crumbs = [['Home', route('home')], ...collect($area->trail())->map(fn ($step) => [$step->level() === 'australia' ? 'Play' : $step->name(), $step->url()])->all()];
     $avatars = ['bg-court text-white', 'bg-gum text-navy', 'bg-court-deep text-white', 'bg-ball text-navy'];
     $initials = fn (string $name) => collect(preg_split('/\s+/', preg_replace('/[^\pL\s]/u', '', $name)))
         ->reject(fn ($word) => in_array(strtolower($word), ['the', 'and', 'of', 'inc', 'club', 'pickleball', '']))
@@ -73,15 +69,15 @@
             'Clubs list their sessions by level, from New to Open. If you are unsure, start with a beginner or come and try session and ask the club where you fit.',
         ],
     ]);
-    $schema[] = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => collect($faq)->values()->map(fn ($qa) => ['@type' => 'Question', 'name' => $qa[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $qa[1]]])->all()];
+    // Structured data (brief: BreadcrumbList, ItemList of venues, FAQPage), from what the page shows.
+    $schema = [
+        \App\Support\Seo\Schema::itemList("Pickleball venues in {$place}", $venues->map(fn ($venue) => ['name' => $venue->name, 'url' => route('explore.venue', $venue)])),
+        \App\Support\Seo\Schema::faq($faq),
+    ];
 @endphp
 
-<x-site :title="'Pickleball in '.$place" :description="'Pickleball in '.$place.': '.$plural($stats['venues'], 'venue').' and '.$plural($stats['clubs'], 'club').', with courts, sessions, fees and coaches.'" :canonical="$area->url()" :noindex="$drafts">
-    <x-slot:head>
-        @foreach ($schema as $block)
-            <script type="application/ld+json">{!! json_encode($block, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
-        @endforeach
-    </x-slot:head>
+<x-site :title="'Pickleball in '.$place" :description="'Pickleball in '.$place.': '.$plural($stats['venues'], 'venue').' and '.$plural($stats['clubs'], 'club').', with courts, sessions, fees and coaches.'"
+    :canonical="$area->url()" :noindex="$drafts" page-type="CollectionPage" :breadcrumbs="$crumbs" :schema="$schema">
 
     {{-- Hero --}}
     <section class="border-b border-line bg-white">

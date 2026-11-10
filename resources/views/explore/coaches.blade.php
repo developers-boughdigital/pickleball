@@ -29,7 +29,11 @@
         ->join(' · ');
 @endphp
 
-<x-site title="Find a pickleball coach" description="Private lessons, small groups and clinics near you, filtered by your level.">
+{{-- Kept out of search (noindex) while the coaches are placeholders; only real clubs go in the structured data. --}}
+<x-site title="Find a pickleball coach" description="Private lessons, small groups and clinics near you, filtered by your level."
+    :canonical="route('explore.coaches')" noindex page-type="CollectionPage"
+    :breadcrumbs="[['Home', route('home')], ['Play', route('play')], ['Coaches', route('explore.coaches')]]"
+    :schema="[\App\Support\Seo\Schema::itemList('Pickleball clubs that offer coaching', $coachingClubs->map(fn ($club) => ['name' => $club->name, 'url' => route('explore.club', $club)]))]">
     <form method="GET" action="{{ route('explore.coaches') }}"
         x-data="{
             locating: false,
@@ -54,6 +58,7 @@
         <section class="border-b border-line bg-white">
             <div class="site-wrap pt-6 pb-8">
                 <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
+                    <a href="{{ route('home') }}" class="site-link font-normal">Home</a><span aria-hidden="true">›</span>
                     <a href="{{ route('play') }}" class="site-link font-normal">Play</a><span aria-hidden="true">›</span>
                     <span class="font-bold text-navy">Coaches</span>
                 </nav>

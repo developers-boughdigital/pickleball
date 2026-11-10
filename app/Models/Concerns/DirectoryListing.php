@@ -4,6 +4,7 @@ namespace App\Models\Concerns;
 
 use App\Models\Locality;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
@@ -41,6 +42,8 @@ trait DirectoryListing
 
     /** Sort value for listings without coordinates, so they come last on every database. */
     public const UNKNOWN_DISTANCE = 999999;
+
+    private const VERSION_KEY = 'directory:version';
 
     public const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
@@ -87,6 +90,20 @@ trait DirectoryListing
                 Locality::fillListing($listing);
             }
         });
+
+        // Anything built from the directory (the sitemap) is cached under this version.
+        $changed = fn () => Cache::forever(self::VERSION_KEY, (string) hrtime(true));
+        static::saved($changed);
+        static::deleted($changed);
+        if (method_exists(static::class, 'restored')) {
+            static::restored($changed);
+        }
+    }
+
+    /** Changes whenever any venue or club is saved or deleted. */
+    public static function directoryVersion(): string
+    {
+        return (string) Cache::get(self::VERSION_KEY, '0');
     }
 
     /** V0001, V0002, ... continuing after the highest ref in use. */

@@ -12,14 +12,23 @@
         'Court lines' => $venue->label('court_lines'),
     ]);
     $amenities = array_filter(Venue::FACILITIES, fn ($label, $key) => $venue->getAttribute($key) === true, ARRAY_FILTER_USE_BOTH);
+
+    $url = route('explore.venue', $venue);
+    $crumbs = [['Home', route('home')], ['Venues', route('explore.venues')], [$venue->name, $url]];
+    $where = $venue->suburb ? ', '.$venue->suburb : '';
 @endphp
 
-<x-site :title="$venue->name" :description="'Pickleball at '.$venue->name.($venue->suburb ? ', '.$venue->suburb : '').': courts, facilities and how to book.'">
+<x-site
+    :title="$venue->meta_title ?: $venue->name.' pickleball courts'.$where"
+    :description="$venue->meta_description ?: 'Pickleball at '.$venue->name.$where.($venue->court_count ? ': '.$venue->court_count.' '.str('court')->plural($venue->court_count) : '').', facilities, prices and how to book.'"
+    :canonical="$url" :noindex="$venue->status !== 'published'" :breadcrumbs="$crumbs" :schema="[\App\Support\Seo\Schema::venue($venue, $url)]">
     <section class="border-b border-line bg-white">
         <div class="site-wrap pt-6 pb-8">
-            <a href="{{ $back }}" class="site-link inline-flex items-center gap-1 font-normal">
-                <x-icon name="chevron-left" class="size-4" /> All venues
-            </a>
+            <nav aria-label="Breadcrumb" class="flex flex-wrap gap-2 text-muted">
+                <a href="{{ route('home') }}" class="site-link font-normal">Home</a><span aria-hidden="true">›</span>
+                <a href="{{ $back }}" class="site-link font-normal">Venues</a><span aria-hidden="true">›</span>
+                <span class="font-bold text-navy" aria-current="page">{{ $venue->name }}</span>
+            </nav>
             <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="font-bold text-gum-text">{{ $venue->label('venue_type') ?? 'Place to play' }}</p>

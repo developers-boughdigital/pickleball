@@ -1,5 +1,5 @@
 {{-- Home page. Kept simple for now; the location and explore pages hold the content. --}}
-<x-site description="Pickleball clubs, courts and coaches across Australia." :canonical="route('home')">
+<x-site title="Pickleball clubs, courts and coaches in Australia" description="Find a pickleball club to join, a court near you or a coach to lift your game. Venues, sessions, levels and fees across Australia." :canonical="route('home')">
     <section class="border-b border-line bg-white">
         <div class="site-wrap flex flex-wrap items-end gap-10 py-12 sm:py-16">
             <div class="min-w-0 flex-[1_1_520px]">
