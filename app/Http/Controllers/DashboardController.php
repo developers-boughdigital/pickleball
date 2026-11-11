@@ -20,6 +20,10 @@ class DashboardController extends Controller
     {
         $hour = now()->hour;
 
+        // After a deploy the code can be ahead of the database. Don't touch the new
+        // tables until the migrations have run (Admin › Database), just say so.
+        $pending = $this->pendingMigrations();
+
         return view('admin.dashboard', [
             'greeting' => match (true) {
                 $hour < 12 => 'Good morning',
@@ -37,7 +41,8 @@ class DashboardController extends Controller
                 'failedToday' => ActivityLog::where('created_at', '>=', today())->where('succeeded', false)->count(),
             ],
             // The directory at this stage: what's live, and whether location pages have what they need.
-            'directory' => $request->user()->canAny(['venues.view', 'clubs.view']) ? [
+            'pendingMigrations' => $pending,
+            'directory' => ! $pending && $request->user()->canAny(['venues.view', 'clubs.view']) ? [
                 'venues' => Venue::count(),
                 'venuesLive' => Venue::where('status', 'published')->count(),
                 'clubs' => Club::count(),
@@ -49,5 +54,13 @@ class DashboardController extends Controller
             'newestUsers' => User::with('roles')->latest()->take(5)->get(),
             'roles' => Role::withCount('users')->orderByDesc('users_count')->orderBy('id')->get(),
         ]);
+    }
+
+    private function pendingMigrations(): int
+    {
+        $migrator = app('migrator');
+        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+
+        return count(array_diff(array_keys($migrator->getMigrationFiles(database_path('migrations'))), $ran));
     }
 }

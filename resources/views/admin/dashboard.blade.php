@@ -1,6 +1,17 @@
 <x-admin.layout title="Overview" :breadcrumb="['Dashboard', 'Overview']">
     <x-admin.page-header :title="$greeting.', '.$firstName" :subtitle="'Here’s what’s happening in '.config('app.name').' today, '.now()->format('l j F').'.'" />
 
+    @if ($pendingMigrations)
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p>The database is {{ $pendingMigrations }} {{ str('update')->plural($pendingMigrations) }} behind the code, so some pages won’t work until they’ve run.</p>
+            @if (auth()->user()->hasRole(\App\Models\Role::SUPER_ADMIN))
+                <a href="{{ route('admin.database') }}" class="btn-gold">Open Database</a>
+            @else
+                <p class="text-xs">Ask a super admin to run them from Admin › Database.</p>
+            @endif
+        </div>
+    @endif
+
     <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <a href="{{ route('admin.users.index') }}" class="card block p-4 transition hover:border-brand-300">
             <div class="flex items-center justify-between">

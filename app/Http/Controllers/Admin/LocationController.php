@@ -60,12 +60,12 @@ class LocationController extends Controller
 
     public function fill(Request $request): RedirectResponse
     {
-        if (! Locality::exists()) {
-            return back()->with('status', 'The suburb lookup is empty. Run `php artisan localities:import` on the server first.');
-        }
+        // A fresh server has the table but not the rows; load them from the file that ships with the code.
+        $loaded = Locality::exists() ? null : Geography::importLocalities();
 
         $filled = Geography::fillDirectory();
-        $message = "Filled city and council on {$filled['venues']} venues and {$filled['clubs']} clubs from their postcodes.";
+        $message = ($loaded ? 'Loaded '.number_format($loaded).' suburbs into the lookup. ' : '')
+            ."Filled city and council on {$filled['venues']} venues and {$filled['clubs']} clubs from their postcodes.";
 
         ActivityLog::record('directory.locations_filled', $message);
 

@@ -189,6 +189,32 @@ class LocationTest extends TestCase
         $this->post('/admin/locations/fill')->assertForbidden();
     }
 
+    public function test_fill_loads_an_empty_lookup_from_the_shipped_file(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        Locality::query()->delete();
+
+        $this->actingAs(User::factory()->create()->assignRole(Role::SUPER_ADMIN))
+            ->post('/admin/locations/fill')->assertSessionHas('status', fn (string $status) => str_starts_with($status, 'Loaded '));
+        $this->assertGreaterThan(10000, Locality::count());
+    }
+
+    public function test_dashboard_still_opens_when_the_database_is_behind_the_code(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $admin = User::factory()->create()->assignRole(Role::SUPER_ADMIN);
+
+        // What a server looks like when the new code is deployed but not migrated.
+        \Illuminate\Support\Facades\Schema::drop('listing_reports');
+        \Illuminate\Support\Facades\DB::table('migrations')->where('migration', '2026_11_10_090000_create_localities_table')->delete();
+
+        $this->actingAs($admin)->get('/dashboard')->assertOk()
+            ->assertSee('1 update behind the code')
+            ->assertSee(route('admin.database'))
+            ->assertDontSee('Reports to check');
+        $this->get('/admin/database')->assertOk();
+    }
+
     public function test_admin_resolves_reports(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

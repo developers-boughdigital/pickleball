@@ -13,7 +13,7 @@
         @can('venues.update')
             <form method="POST" action="{{ route('admin.locations.fill') }}">
                 @csrf
-                <button class="btn-gold" @disabled(! $localities)>
+                <button class="btn-gold">
                     <x-icon name="map-pin" class="size-4" />
                     Fill from postcodes
                 </button>
@@ -24,7 +24,7 @@
     <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <x-admin.stat label="Venues with all four levels" :value="$percent($venues['complete'], $venues['total']).'%'" :note="number_format($venues['complete']).' of '.number_format($venues['total'])" :note-class="$percent($venues['complete'], $venues['total']) >= 95 ? 'text-emerald-600' : 'text-amber-600'" />
         <x-admin.stat label="Clubs with all four levels" :value="$percent($clubs['complete'], $clubs['total']).'%'" :note="number_format($clubs['complete']).' of '.number_format($clubs['total'])" :note-class="$percent($clubs['complete'], $clubs['total']) >= 95 ? 'text-emerald-600' : 'text-amber-600'" />
-        <x-admin.stat label="Suburb lookup" :value="number_format($localities)" :note="$localities ? 'Suburbs with council and city' : 'Empty: run php artisan localities:import'" :note-class="$localities ? 'text-brand-600' : 'text-red-600'" />
+        <x-admin.stat label="Suburb lookup" :value="number_format($localities)" :note="$localities ? 'Suburbs with council and city' : 'Empty: Fill from postcodes loads it'" :note-class="$localities ? 'text-brand-600' : 'text-red-600'" />
         <x-admin.stat label="Unknown postcodes" :value="$unknownPostcodes->count()" note="Probably typos; fix them on the listing" :note-class="$unknownPostcodes->isEmpty() ? 'text-emerald-600' : 'text-amber-600'" />
     </div>
 
