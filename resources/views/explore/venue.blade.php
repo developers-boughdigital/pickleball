@@ -4,7 +4,6 @@
     $back = route('explore.venues', $drafts ? ['drafts' => 1] : []);
     $short = fn (string $url) => preg_replace('~^https?://(www\.)?~', '', rtrim($url, '/'));
     $hasMap = $venue->latitude !== null && $venue->longitude !== null;
-    $bbox = $hasMap ? implode(',', [$venue->longitude - 0.012, $venue->latitude - 0.007, $venue->longitude + 0.012, $venue->latitude + 0.007]) : null;
     $facts = array_filter([
         'Courts' => $venue->court_count,
         'Indoor or outdoor' => $venue->indoor_outdoor ? Venue::SETTINGS[$venue->indoor_outdoor] ?? null : null,
@@ -82,20 +81,20 @@
             </section>
 
             @if ($hasMap)
-                {{-- Loaded on request: the embedded map pulls in a lot and can keep the page "loading" for a long time. --}}
-                <section x-data="{ map: false }" class="site-card overflow-hidden">
-                    <template x-if="map">
-                        <iframe
-                            title="Map of {{ $venue->name }}"
-                            src="https://www.openstreetmap.org/export/embed.html?bbox={{ $bbox }}&layer=mapnik&marker={{ $venue->latitude }},{{ $venue->longitude }}"
-                            class="h-72 w-full border-0"
-                        ></iframe>
-                    </template>
-                    <button x-show="! map" type="button" @click="map = true" class="flex h-40 w-full flex-col items-center justify-center gap-2 bg-court-soft font-bold text-court transition hover:bg-[#d6e3f8]">
-                        <x-icon name="map-pin" class="size-6 text-court" />
-                        Show map
-                    </button>
-                    <p class="px-4 py-2 text-muted">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" class="hover:text-court hover:underline">OpenStreetMap</a> contributors</p>
+                {{-- Drawn by Leaflet once it scrolls into view, so it doesn't slow the page down. --}}
+                <section class="site-card relative h-80 overflow-hidden bg-court-soft" x-data="venueMap(@js([[
+                    'lat' => (float) $venue->latitude,
+                    'lng' => (float) $venue->longitude,
+                    'name' => $venue->name,
+                    'suburb' => $venue->fullAddress(),
+                    'url' => $venue->mapUrl() ?: $url,
+                    'club' => $venue->clubs->isNotEmpty(),
+                    'action' => $venue->mapUrl() ? 'Directions' : null,
+                    'external' => (bool) $venue->mapUrl(),
+                ]]), { zoom: 16 })">
+                    <div x-ref="map" class="absolute inset-0 z-0" role="region" aria-label="Map of {{ $venue->name }}"></div>
+                    <p x-show="! ready && ! failed" class="absolute inset-0 grid place-items-center text-muted">Loading map…</p>
+                    <p x-show="failed" x-cloak class="absolute inset-0 grid place-items-center text-muted">The map couldn’t load.</p>
                 </section>
             @endif
 

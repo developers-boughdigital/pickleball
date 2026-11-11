@@ -61,13 +61,13 @@ class LocationTest extends TestCase
     {
         $this->get('/play')->assertOk()
             ->assertSee('Pickleball in Australia')
-            ->assertSee('Browse by state')
+            ->assertSeeInOrder(['Browse by place', 'State'])
             ->assertSee('href="'.url('/play/vic').'"', false)
             ->assertDontSee('Secret Greensborough Draft');
 
         $this->get('/play/vic')->assertOk()
             ->assertSee('Pickleball in Victoria')
-            ->assertSee('Browse by city or region')
+            ->assertSee('City or region')
             ->assertSee('href="'.url('/play/vic/melbourne').'"', false)
             ->assertSee('href="'.url('/play/vic/geelong').'"', false)
             ->assertSee('All of Australia');
@@ -77,14 +77,14 @@ class LocationTest extends TestCase
     {
         $this->get('/play/vic/melbourne')->assertOk()
             ->assertSee('Pickleball in Melbourne')
-            ->assertSee('Browse by council area')
+            ->assertSee('Council area')
             ->assertSee('href="'.url('/play/vic/melbourne/banyule').'"', false)
             ->assertSee('Northcote Stadium')
             ->assertDontSee('Geelong Arena');
 
         $this->get('/play/vic/melbourne/banyule')->assertOk()
             ->assertSeeInOrder(['Home', 'Play', 'Victoria', 'Melbourne', 'Banyule'])
-            ->assertSee('Browse by suburb')
+            ->assertSeeInOrder(['Council area', 'Banyule', 'Suburb', 'Greensborough'])
             ->assertSee('Heidelberg Hall')
             ->assertDontSee('Northcote Stadium')
             ->assertSee('Distance')
@@ -207,8 +207,13 @@ class LocationTest extends TestCase
         $this->get('/play/find?q=Dinkers')->assertRedirect(route('explore.clubs', ['q' => 'Dinkers']));
         $this->get('/play/find?lat=-37.7&lng=145.1')->assertRedirect(route('explore.clubs', ['lat' => '-37.7', 'lng' => '145.1']));
 
-        $this->get('/play')->assertSeeInOrder(['Choose your state', 'Victoria']);
-        $this->get('/play/vic/melbourne')->assertSeeInOrder(['Choose a council area', 'Banyule', 'Darebin']);
+        $this->get('/play')->assertSeeInOrder(['Browse by place', 'State', 'All', 'Victoria']);
+        // On a city page: the state and city tabs are chosen, and the councils are the next row.
+        $html = $this->get('/play/vic/melbourne')
+            ->assertSeeInOrder(['State', 'Victoria', 'City or region', 'Melbourne', 'Council area', 'All', 'Banyule', 'Darebin'])
+            ->getContent();
+        $this->assertMatchesRegularExpression('#href="'.preg_quote(url('/play/vic'), '#').'" data-keep-scroll="browse"\s+aria-current="true"#', $html);
+        $this->assertMatchesRegularExpression('#href="'.preg_quote(url('/play/vic/melbourne'), '#').'" data-keep-scroll="browse"\s+aria-current="page"#', $html);
     }
 
     public function test_listings_link_to_their_location_pages(): void

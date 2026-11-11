@@ -94,7 +94,7 @@ class ExploreTest extends TestCase
 
         $this->get('/explore/venues/pickledome')->assertOk()
             ->assertSee('56 Coyne Street, Fadden, ACT 2904')
-            ->assertSee('Show map')
+            ->assertSee('aria-label="Map of Pickledome"', false)
             ->assertSee('Pickleball ACT')
             ->assertDontSee('Admin note');
 

@@ -2,11 +2,13 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import { start as startRouter, visit } from './router';
 import installer from './installer';
+import venueMap from './map';
 import { permissionForm, permissionPicker, settingsForm, userForm } from './forms';
 
 Alpine.store('nav', { loading: false });
 Alpine.magic('visit', () => visit);
 Alpine.data('installer', installer);
+Alpine.data('venueMap', venueMap);
 Alpine.data('userForm', userForm);
 Alpine.data('permissionForm', permissionForm);
 Alpine.data('permissionPicker', permissionPicker);

@@ -133,7 +133,8 @@ class LocationController extends Controller
             'pins' => $venues()->whereNotNull('latitude')->whereNotNull('longitude')
                 ->withExists(['clubs' => fn (Builder $query) => $query->visible($drafts)])
                 ->get(['id', 'slug', 'name', 'suburb', 'latitude', 'longitude']),
-            'children' => $this->children($area, $drafts),
+            'children' => $children = $this->children($area, $drafts),
+            'tabs' => $this->tabs($area, $children, $drafts),
             'nearby' => $this->nearby($area, $centre, $drafts),
             'sessions' => $clubs()->whereNotNull('session_times_text')->with($visibleVenues)
                 ->orderByDesc('beginners_welcome')->orderBy('name')->limit(4)->get(),
@@ -151,6 +152,31 @@ class LocationController extends Controller
             'coaches' => SampleCoaches::all()->take(3),
             'showDistance' => $showDistance,
         ]);
+    }
+
+    /**
+     * The "Browse by" tabs: a row for each level from Australia down to here, each
+     * with the places beside the one chosen, then a row for the level below.
+     * On /play/vic/melbourne: states (Victoria chosen), then councils in Melbourne
+     * (none chosen yet), with the cities of Victoria in between.
+     *
+     * @return list<array{parent: Area, level: string, options: Collection, active: ?Area}>
+     */
+    private function tabs(Area $area, Collection $children, bool $drafts): array
+    {
+        $trail = $area->trail();
+
+        return collect($trail)
+            ->filter(fn (Area $step) => $step->childLevel() !== null)
+            ->map(fn (Area $step, int $i) => [
+                'parent' => $step,
+                'level' => $step->childLevel(),
+                'options' => $step === $area ? $children : $this->children($step, $drafts),
+                'active' => $trail[$i + 1] ?? null,
+            ])
+            ->filter(fn (array $row) => $row['options']->isNotEmpty() || $row['active'])
+            ->values()
+            ->all();
     }
 
     /**

@@ -9,35 +9,17 @@
     $dollars = fn (int $cents) => '$'.number_format($cents / 100, $cents % 100 ? 2 : 0);
     $plural = fn (int $count, string $word) => number_format($count).' '.str($word)->plural($count);
 
-    // Pins on a plain projection of the area. The outer 2% each way is trimmed so
-    // one stray coordinate can't shrink everything else into a corner.
-    $lats = $pins->pluck('latitude')->sort()->values();
-    $lngs = $pins->pluck('longitude')->sort()->values();
-    $edge = fn ($sorted, float $at) => $sorted->isEmpty() ? 0 : $sorted[(int) floor(($sorted->count() - 1) * $at)];
-    [$south, $north, $west, $east] = [$edge($lats, 0.02), $edge($lats, 0.98), $edge($lngs, 0.02), $edge($lngs, 0.98)];
-    $latSpan = max($north - $south, 0.02);
-    $lngSpan = max($east - $west, 0.02);
-    $spots = $pins
-        ->filter(fn ($venue) => $venue->latitude >= $south && $venue->latitude <= $north && $venue->longitude >= $west && $venue->longitude <= $east)
-        ->map(fn ($venue) => [
-            'venue' => $venue,
-            'x' => 6 + ($venue->longitude - $west) / $lngSpan * 88,
-            'y' => 10 + ($north - $venue->latitude) / $latSpan * 72,
-        ]);
-    $pinSize = $spots->count() > 150 ? 'size-3 border-2' : 'size-5 border-[3px]';
+    // For the map (resources/js/map.js).
+    $mapPins = $pins->map(fn ($venue) => [
+        'lat' => (float) $venue->latitude,
+        'lng' => (float) $venue->longitude,
+        'name' => $venue->name,
+        'suburb' => $venue->suburb,
+        'url' => route('explore.venue', [$venue, ...$keep]),
+        'club' => (bool) $venue->clubs_exists,
+    ])->values();
 
-    $areaHeading = [
-        'state' => 'Browse by state',
-        'city' => 'Browse by city or region',
-        'council' => 'Browse by council area',
-        'suburb' => 'Browse by suburb',
-    ][$area->childLevel()] ?? null;
-    $chooseLabel = [
-        'state' => 'Choose your state',
-        'city' => 'Choose a city or region',
-        'council' => 'Choose a council area',
-        'suburb' => 'Choose a suburb',
-    ][$area->childLevel()] ?? null;
+    $levelLabels = ['state' => 'State', 'city' => 'City or region', 'council' => 'Council area', 'suburb' => 'Suburb'];
     $thin = $level !== 'australia' && $stats['venues'] < 3;
     $parent = $area->parent();
 
@@ -125,23 +107,6 @@
                             </div>
                         @endforeach
                     </dl>
-
-                    {{-- The way down to the next level, where people see it first. --}}
-                    @if ($children->isNotEmpty())
-                        <nav aria-label="{{ $areaHeading }}" class="mt-6">
-                            <p class="font-bold text-navy">{{ $chooseLabel }}</p>
-                            <ul class="mt-2 flex flex-wrap gap-2">
-                                @foreach ($children->take(10) as $row)
-                                    <li><a href="{{ $row->area->url($keep) }}" class="site-chip">{{ $row->area->name() }}</a></li>
-                                @endforeach
-                                @if ($children->count() > 10)
-                                    <li><a href="#areas" class="site-chip border-court text-court">All {{ $children->count() }}</a></li>
-                                @endif
-                            </ul>
-                        </nav>
-                    @elseif ($parent)
-                        <p class="mt-6"><a href="{{ $parent->url($keep) }}" class="site-link">← All of {{ $parent->name() }}</a></p>
-                    @endif
                 </div>
 
                 <form method="GET" action="{{ route('play.find') }}" class="flex min-w-0 flex-[1_1_380px] flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)]"
@@ -199,57 +164,94 @@
     {{-- Map and areas --}}
     <section class="site-wrap pt-8">
         <div class="flex flex-wrap gap-6">
-            <div class="site-card relative min-h-[440px] min-w-0 flex-[3_1_560px] overflow-hidden bg-court-soft">
-                <div aria-hidden="true" class="absolute inset-0 bg-[linear-gradient(#D5DDE8_1px,transparent_1px),linear-gradient(90deg,#D5DDE8_1px,transparent_1px)] bg-size-[80px_80px] opacity-50"></div>
-                @foreach ($spots as $spot)
-                    <a href="{{ route('explore.venue', [$spot['venue'], ...$keep]) }}" title="{{ $spot['venue']->name }}{{ $spot['venue']->suburb ? ', '.$spot['venue']->suburb : '' }}" tabindex="-1" aria-hidden="true"
-                        class="absolute -translate-1/2 rounded-full border-white transition hover:z-10 hover:scale-150 {{ $pinSize }} {{ $spot['venue']->clubs_exists ? 'bg-gum' : 'bg-court' }}"
-                        style="left: {{ round($spot['x'], 2) }}%; top: {{ round($spot['y'], 2) }}%"></a>
-                @endforeach
-                @if ($spots->isEmpty())
+            <div class="site-card relative min-h-[440px] min-w-0 flex-[3_1_560px] overflow-hidden bg-court-soft" x-data="venueMap(@js($mapPins))">
+                {{-- The map itself is drawn by Leaflet once it scrolls into view. The venue table below has the same venues for screen readers. --}}
+                <div x-ref="map" class="absolute inset-0 z-0" role="region" aria-label="Map of pickleball venues in {{ $place }}"></div>
+                @if ($mapPins->isEmpty())
                     <p class="absolute inset-0 grid place-items-center text-muted">No venues on the map yet.</p>
+                @else
+                    <p x-show="! ready && ! failed" class="absolute inset-0 grid place-items-center text-muted">Loading map…</p>
+                    <p x-show="failed" x-cloak class="absolute inset-0 grid place-items-center text-muted">The map couldn’t load. The venues are listed below.</p>
                 @endif
 
-                <div class="absolute top-4 left-4 flex overflow-hidden rounded-xl border-2 border-line-strong bg-white">
+                <div class="absolute top-4 right-4 z-[1000] flex overflow-hidden rounded-xl border-2 border-line-strong bg-white shadow-sm">
                     <span class="site-btn rounded-none bg-court text-white">Map</span>
                     <a href="{{ route('explore.venues', [...$here, ...$keep]) }}" class="site-btn rounded-none bg-white text-court">List</a>
                 </div>
-                <div class="absolute right-4 bottom-4 left-4 flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex flex-wrap gap-4 rounded-xl bg-white px-3.5 py-2">
-                        <span class="inline-flex items-center gap-2"><span aria-hidden="true" class="size-3.5 rounded-full bg-court"></span>Venue</span>
-                        <span class="inline-flex items-center gap-2"><span aria-hidden="true" class="size-3.5 rounded-full bg-gum"></span>A club plays here</span>
+                <div class="pointer-events-none absolute right-4 bottom-6 left-4 z-[1000] flex flex-wrap items-center justify-between gap-3">
+                    {{-- The legend is also the filter: click one to hide those pins, again to show them. --}}
+                    <div role="group" aria-label="Show on the map" class="pointer-events-auto flex flex-wrap gap-1 rounded-xl bg-white p-1 shadow-sm">
+                        @foreach (['venue' => 'Venue', 'club' => 'A club plays here'] as $kind => $label)
+                            <button type="button" @click="toggle('{{ $kind }}')" :aria-pressed="show.{{ $kind }}"
+                                :title="show.{{ $kind }} ? 'Hide these from the map' : 'Show these on the map'"
+                                class="inline-flex min-h-9 items-center gap-2 rounded-lg px-2.5 transition hover:bg-court-soft"
+                                :class="show.{{ $kind }} ? '' : 'text-muted line-through opacity-60'">
+                                <x-site.map-pin :club="$kind === 'club'" class="h-5 transition" ::class="show.{{ $kind }} ? '' : 'grayscale'" />
+                                {{ $label }}
+                            </button>
+                        @endforeach
                     </div>
-                    <span class="rounded-xl bg-white px-3.5 py-2 text-muted">{{ $plural($spots->count(), 'venue') }} mapped</span>
+                    <span class="rounded-xl bg-white px-3.5 py-2 text-muted shadow-sm"
+                        x-text="shown === {{ $mapPins->count() }} ? @js($plural($mapPins->count(), 'venue').' mapped') : shown + ' of {{ $mapPins->count() }} venues shown'">{{ $plural($mapPins->count(), 'venue') }} mapped</span>
                 </div>
             </div>
 
-            <div id="areas" class="min-w-0 flex-[2_1_340px] scroll-mt-6">
-                @if ($children->isNotEmpty())
-                    <h2 class="site-h2 mb-4">{{ $areaHeading }}</h2>
-                    <ul class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3" x-data="{ all: false }">
-                        @foreach ($children as $row)
-                            <li @if ($loop->index >= 12) x-show="all" x-cloak @endif>
-                                <a href="{{ $row->area->url($keep) }}" class="site-card block px-4 py-3.5 text-navy no-underline transition hover:shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
-                                    <span class="site-h3 block text-court">{{ $row->area->name() }}</span>
-                                    <span class="text-muted">{{ $plural($row->venues, 'venue') }}@if ($row->clubs) · {{ $plural($row->clubs, 'club') }}@endif</span>
-                                </a>
-                            </li>
-                        @endforeach
-                        @if ($children->count() > 12)
-                            <li class="col-span-full" x-show="! all"><button type="button" class="site-link inline-flex min-h-11 items-center" @click="all = true">Show all {{ $children->count() }}</button></li>
-                        @endif
-                    </ul>
-                    <a href="{{ route('explore.venues', [...$here, ...$keep]) }}" class="site-link mt-2 inline-flex min-h-11 items-center">See every venue in {{ $place }}</a>
-                @else
-                    <h2 class="site-h2 mb-4">Around {{ $place }}</h2>
-                    <div class="site-card p-6">
+            {{-- "Browse by": tabs, one row per level. Each tab is a real link to its
+                 page (for Google and for sharing), but the page swaps in place and
+                 stays where it is on screen (data-keep-scroll, resources/js/router.js). --}}
+            <nav id="browse" aria-label="Browse by place" class="order-first min-w-0 flex-[2_1_340px] lg:order-none">
+                <h2 class="site-h2 mb-4">Browse by place</h2>
+                <div class="site-card divide-y divide-line">
+                    @foreach ($tabs as $row)
+                        @php
+                            $options = $row['options'];
+                            // Somewhere with nothing published yet still shows as chosen.
+                            if ($row['active'] && ! $options->contains(fn ($option) => $option->area->name() === $row['active']->name())) {
+                                $options = $options->prepend((object) ['area' => $row['active'], 'venues' => 0, 'clubs' => 0]);
+                            }
+                            $activeAt = $row['active'] ? $options->search(fn ($option) => $option->area->name() === $row['active']->name()) : false;
+                        @endphp
+                        @php
+                            // Levels already chosen fold up to the choice; the one to choose from now stays open.
+                            $open = $loop->last;
+                        @endphp
+                        <div class="p-4" x-data="{ open: @js($open), all: @js($activeAt !== false && $activeAt >= 8) }">
+                            <div class="mb-2 flex items-center justify-between gap-2">
+                                <p class="font-bold text-muted">{{ $levelLabels[$row['level']] }}</p>
+                                @unless ($open)
+                                    <button type="button" class="site-link text-sm" @click="open = ! open" :aria-expanded="open" x-text="open ? 'Done' : 'Change'">Change</button>
+                                @endunless
+                            </div>
+                            <ul class="flex flex-wrap gap-2">
+                                <li @unless ($open || ! $row['active']) x-show="open" x-cloak @endunless>
+                                    <a href="{{ $row['parent']->url($keep) }}" data-keep-scroll="browse" @if (! $row['active']) aria-current="page" @endif
+                                        @class(['site-tab', 'site-tab-on' => ! $row['active']])>All</a>
+                                </li>
+                                @foreach ($options as $option)
+                                    @php($on = $row['active'] && $option->area->name() === $row['active']->name())
+                                    <li @if (! $on && ! $open) x-show="open && (all || {{ $loop->index }} < 8)" x-cloak @elseif (! $on && $loop->index >= 8) x-show="all" x-cloak @endif>
+                                        <a href="{{ $option->area->url($keep) }}" data-keep-scroll="browse" @if ($on) aria-current="{{ $row['active'] == $area ? 'page' : 'true' }}" @endif
+                                            title="{{ $plural($option->venues, 'venue') }}{{ $option->clubs ? ' · '.$plural($option->clubs, 'club') : '' }}"
+                                            @class(['site-tab', 'site-tab-on' => $on])>
+                                            {{ $option->area->name() }}
+                                            @if ($option->venues)
+                                                <span @class(['text-sm font-normal', 'text-white/80' => $on, 'text-muted' => ! $on])>{{ $option->venues }}</span>
+                                            @endif
+                                        </a>
+                                    </li>
+                                @endforeach
+                                @if ($options->count() > 8)
+                                    <li x-show="{{ $open ? '' : 'open && ' }}! all" @unless ($open) x-cloak @endunless><button type="button" class="site-tab border-dashed" @click="all = true">+ {{ $options->count() - 8 }} more</button></li>
+                                @endif
+                            </ul>
+                        </div>
+                    @endforeach
+                    <div class="p-4">
                         <p class="text-muted">{{ $plural($stats['venues'], 'venue') }} and {{ $plural($stats['clubs'], 'club') }}{{ $radius ? " in or within {$radius} km of {$place}" : " in {$place}" }}.</p>
-                        @if ($parent)
-                            <a href="{{ $parent->url($keep) }}" class="site-btn-outline mt-4">All of {{ $parent->name() }}</a>
-                        @endif
+                        <a href="{{ route('explore.venues', [...$here, ...$keep]) }}" class="site-link mt-1 inline-flex min-h-11 items-center">See every venue in {{ $place }}</a>
                     </div>
-                @endif
-            </div>
+                </div>
+            </nav>
         </div>
     </section>
 

@@ -17,7 +17,7 @@ let controller = null;
  *   fallback runs when a non-GET request can't be shown in place (e.g. a 419
  *   or 500 page), so the browser can submit the form for real instead.
  */
-export async function visit(url, { push = true, method = 'GET', body = null, fallback = null } = {}) {
+export async function visit(url, { push = true, method = 'GET', body = null, fallback = null, keepInView = null } = {}) {
     controller?.abort();
     const current = (controller = new AbortController());
 
@@ -41,13 +41,17 @@ export async function visit(url, { push = true, method = 'GET', body = null, fal
         // GET or a redirect is safe to repeat as a GET; anything else isn't.
         // Also when the page comes with a newer build of the scripts and styles
         // (after an `npm run build` or a deploy), so an open tab doesn't keep running old code.
-        if (!doc.querySelector('[data-swap]') || doc.body.dataset.layout !== document.body.dataset.layout || assets(doc) !== assets(document)) {
+        if (!doc.querySelector('[data-swap]') || doc.body.dataset.layout !== document.body.dataset.layout || isNewBuild(doc)) {
             if (method === 'GET' || response.redirected) location.assign(response.url);
             else fullLoad();
             return;
         }
 
         const samePath = new URL(response.url).pathname === location.pathname;
+
+        // Tabs and the like: note where the element is on screen, to put it back there.
+        const anchor = keepInView && document.getElementById(keepInView);
+        const anchorTop = anchor?.getBoundingClientRect().top;
 
         const focused = rememberFocus();
 
@@ -58,7 +62,9 @@ export async function visit(url, { push = true, method = 'GET', body = null, fal
         document.title = doc.title;
 
         if (push) history.pushState({}, '', response.url);
-        if (!samePath) window.scrollTo({ top: 0 });
+        const fresh = anchor && document.getElementById(keepInView);
+        if (fresh) window.scrollBy({ top: fresh.getBoundingClientRect().top - anchorTop, behavior: 'instant' });
+        else if (!samePath) window.scrollTo({ top: 0 });
 
         restoreFocus(focused);
         window.dispatchEvent(new CustomEvent('spa-navigated'));
@@ -80,7 +86,7 @@ export function start() {
         if (!link || !shouldHandle(link, event)) return;
 
         event.preventDefault();
-        visit(link.href);
+        visit(link.href, { keepInView: link.dataset.keepScroll || null });
     });
 
     document.addEventListener('submit', (event) => {
@@ -127,8 +133,15 @@ function shouldHandle(link, event) {
 function assets(doc) {
     return [...doc.head.querySelectorAll('script[src], link[rel="stylesheet"]')]
         .map((el) => new URL(el.getAttribute('src') ?? el.getAttribute('href'), location.href).pathname)
-        .filter((path) => path.includes('/build/'))
-        .join('|');
+        .filter((path) => path.includes('/build/'));
+}
+
+// A file the new page asks for that this tab doesn't have. Only that way round:
+// this tab can have more, from code loaded on demand (the map adds its own styles).
+function isNewBuild(doc) {
+    const loaded = assets(document);
+
+    return assets(doc).some((path) => !loaded.includes(path));
 }
 
 function formUrl(form) {
