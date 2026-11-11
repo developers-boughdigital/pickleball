@@ -30,6 +30,7 @@ Route::get('/', HomeController::class)->name('home');
 // Location pages: /play/{state}/{city}/{council}/{suburb}/, each level a real page.
 Route::controller(LocationController::class)->prefix('play')->name('play')->group(function () {
     Route::get('/', 'hub');
+    Route::get('find', 'find')->name('.find');
     Route::get('{state}/{city?}/{council?}/{suburb?}', 'show')->name('.area')->where('state', '[A-Za-z]{2,3}');
 });
 

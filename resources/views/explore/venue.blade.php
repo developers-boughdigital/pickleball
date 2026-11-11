@@ -37,6 +37,7 @@
                         @if ($venue->fullAddress()) <span class="inline-flex items-center gap-1"><x-icon name="map-pin" class="size-4" />{{ $venue->fullAddress() }}</span> @endif
                         @if ($drafts && $venue->status !== 'published') <span class="badge-muted">Draft</span> @endif
                     </p>
+                    <x-site.area-trail :listing="$venue" :query="$drafts ? ['drafts' => 1] : []" class="mt-2" />
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @if ($venue->booking_url)

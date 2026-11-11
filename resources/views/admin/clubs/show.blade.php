@@ -52,6 +52,8 @@
                 </section>
             @endif
 
+            <x-admin.location-pages :listing="$club" />
+
             <section class="card p-4 sm:p-5">
                 <h2 class="mb-3 text-sm font-semibold">Where they play</h2>
                 @forelse ($club->venues as $venue)

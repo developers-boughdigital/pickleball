@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Locality;
 use App\Models\Venue;
 use App\Support\Area;
 use App\Support\SampleCoaches;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -28,6 +30,62 @@ class LocationController extends Controller
     public function hub(Request $request): View
     {
         return $this->page($request, Area::australia());
+    }
+
+    /**
+     * The "Find a game near you" box. A state, city, council, suburb or postcode
+     * goes to its location page; anything else (a club name) searches the lists.
+     */
+    public function find(Request $request): RedirectResponse
+    {
+        $keep = $request->boolean('drafts') ? ['drafts' => 1] : [];
+
+        if ($request->filled('lat')) {
+            return redirect()->route('explore.clubs', $request->only('lat', 'lng', 'drafts'));
+        }
+
+        $text = $request->string('q')->squish()->limit(100, '')->value();
+        $area = $text === '' ? Area::australia() : $this->placeNamed($text);
+
+        return $area
+            ? redirect()->to($area->url($keep))
+            : redirect()->route('explore.clubs', ['q' => $text, ...$keep]);
+    }
+
+    private function placeNamed(string $text): ?Area
+    {
+        // "Greensborough VIC" or "Banyule, Vic": a state on the end narrows it down.
+        $state = null;
+        if (preg_match('/^(.+?)[\s,]+([a-z]{2,3})$/i', $text, $parts) && in_array(strtoupper($parts[2]), Venue::STATES)) {
+            [$text, $state] = [trim($parts[1], ' ,'), strtoupper($parts[2])];
+        }
+
+        $code = strtoupper($text);
+        $named = array_search(mb_strtolower($text), array_map('mb_strtolower', Venue::STATE_NAMES));
+        if (! $state && (in_array($code, Venue::STATES) || $named)) {
+            return Area::make($named ?: $code);
+        }
+
+        if (preg_match('/^\d{4}$/', $text)) {
+            $place = Locality::query()->where('postcode', $text)->whereNotNull('city')->orderBy('suburb')->first();
+
+            return $place ? Area::make($place->state, $place->city, $place->council, $place->suburb) : null;
+        }
+
+        // Biggest first, so "Melbourne" is the city rather than the suburb.
+        $name = mb_strtolower($text);
+        foreach (['city', 'council', 'suburb'] as $level) {
+            foreach ([Venue::class, Club::class, Locality::class] as $model) {
+                $match = $model::query()->whereRaw("lower({$level}) = ?", [$name])->whereNotNull('city')
+                    ->when($state, fn (Builder $query) => $query->where('state', $state))
+                    ->first(['state', 'city', 'council', 'suburb']);
+                if ($match && ($level === 'city' || $match->council)) {
+                    return Area::make($match->state, $match->city, $level === 'city' ? null : $match->council, $level === 'suburb' ? $match->suburb : null);
+                }
+            }
+        }
+
+        return null;
     }
 
     public function show(Request $request, string $state, ?string $city = null, ?string $council = null, ?string $suburb = null): View

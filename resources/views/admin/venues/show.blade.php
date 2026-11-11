@@ -72,6 +72,8 @@
                 </dl>
             </section>
 
+            <x-admin.location-pages :listing="$venue" />
+
             <section class="card p-4 sm:p-5">
                 <h2 class="mb-3 text-sm font-semibold">Courts & facilities</h2>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">

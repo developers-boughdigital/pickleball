@@ -29,20 +29,7 @@
     <form
         method="GET"
         action="{{ route($route) }}"
-        x-data="{
-            locating: false,
-            problem: '',
-            locate() {
-                if (! navigator.geolocation) { this.problem = 'Your browser can’t share your location.'; return; }
-                this.locating = true;
-                this.problem = '';
-                navigator.geolocation.getCurrentPosition(
-                    (spot) => { this.$refs.lat.value = spot.coords.latitude.toFixed(4); this.$refs.lng.value = spot.coords.longitude.toFixed(4); this.$el.requestSubmit(); },
-                    () => { this.locating = false; this.problem = 'We couldn’t get your location. Try searching by suburb or postcode instead.'; },
-                    { timeout: 10000 },
-                );
-            },
-        }"
+        x-data="nearMe('Try searching by suburb or postcode instead.')"
         @change="$event.target.type !== 'search' && $el.requestSubmit()"
     >
         @if ($drafts) <input type="hidden" name="drafts" value="1"> @endif

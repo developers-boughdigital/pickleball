@@ -32,6 +32,12 @@
         'council' => 'Browse by council area',
         'suburb' => 'Browse by suburb',
     ][$area->childLevel()] ?? null;
+    $chooseLabel = [
+        'state' => 'Choose your state',
+        'city' => 'Choose a city or region',
+        'council' => 'Choose a council area',
+        'suburb' => 'Choose a suburb',
+    ][$area->childLevel()] ?? null;
     $thin = $level !== 'australia' && $stats['venues'] < 3;
     $parent = $area->parent();
 
@@ -119,23 +125,27 @@
                             </div>
                         @endforeach
                     </dl>
+
+                    {{-- The way down to the next level, where people see it first. --}}
+                    @if ($children->isNotEmpty())
+                        <nav aria-label="{{ $areaHeading }}" class="mt-6">
+                            <p class="font-bold text-navy">{{ $chooseLabel }}</p>
+                            <ul class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($children->take(10) as $row)
+                                    <li><a href="{{ $row->area->url($keep) }}" class="site-chip">{{ $row->area->name() }}</a></li>
+                                @endforeach
+                                @if ($children->count() > 10)
+                                    <li><a href="#areas" class="site-chip border-court text-court">All {{ $children->count() }}</a></li>
+                                @endif
+                            </ul>
+                        </nav>
+                    @elseif ($parent)
+                        <p class="mt-6"><a href="{{ $parent->url($keep) }}" class="site-link">← All of {{ $parent->name() }}</a></p>
+                    @endif
                 </div>
 
-                <form method="GET" action="{{ route('explore.clubs') }}" class="flex min-w-0 flex-[1_1_380px] flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)]"
-                    x-data="{
-                        locating: false,
-                        problem: '',
-                        locate() {
-                            if (! navigator.geolocation) { this.problem = 'Your browser can’t share your location.'; return; }
-                            this.locating = true;
-                            this.problem = '';
-                            navigator.geolocation.getCurrentPosition(
-                                (spot) => { this.$refs.lat.value = spot.coords.latitude.toFixed(4); this.$refs.lng.value = spot.coords.longitude.toFixed(4); this.$refs.lat.disabled = this.$refs.lng.disabled = false; this.$el.requestSubmit(); },
-                                () => { this.locating = false; this.problem = 'We couldn’t get your location. Try a suburb or postcode instead.'; },
-                                { timeout: 10000 },
-                            );
-                        },
-                    }">
+                <form method="GET" action="{{ route('play.find') }}" class="flex min-w-0 flex-[1_1_380px] flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)]"
+                    x-data="nearMe">
                     @if ($drafts) <input type="hidden" name="drafts" value="1"> @endif
                     <input type="hidden" name="lat" x-ref="lat" disabled>
                     <input type="hidden" name="lng" x-ref="lng" disabled>
@@ -213,14 +223,14 @@
                 </div>
             </div>
 
-            <div class="min-w-0 flex-[2_1_340px]">
+            <div id="areas" class="min-w-0 flex-[2_1_340px] scroll-mt-6">
                 @if ($children->isNotEmpty())
                     <h2 class="site-h2 mb-4">{{ $areaHeading }}</h2>
                     <ul class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3" x-data="{ all: false }">
                         @foreach ($children as $row)
                             <li @if ($loop->index >= 12) x-show="all" x-cloak @endif>
                                 <a href="{{ $row->area->url($keep) }}" class="site-card block px-4 py-3.5 text-navy no-underline transition hover:shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
-                                    <span class="site-h3 block text-court">{{ $row->area->level() === 'state' ? $row->area->state : $row->area->name() }}</span>
+                                    <span class="site-h3 block text-court">{{ $row->area->name() }}</span>
                                     <span class="text-muted">{{ $plural($row->venues, 'venue') }}@if ($row->clubs) · {{ $plural($row->clubs, 'club') }}@endif</span>
                                 </a>
                             </li>

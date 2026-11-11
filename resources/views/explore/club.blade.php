@@ -37,6 +37,7 @@
                         @if ($club->member_count) <span>{{ number_format($club->member_count) }} members</span> @endif
                         @if ($drafts && $club->status !== 'published') <span class="badge-muted">Draft</span> @endif
                     </p>
+                    <x-site.area-trail :listing="$club" :query="$drafts ? ['drafts' => 1] : []" class="mt-2" />
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @if ($club->booking_url)

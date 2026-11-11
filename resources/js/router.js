@@ -39,7 +39,9 @@ export async function visit(url, { push = true, method = 'GET', body = null, fal
         // We ended up in another layout (e.g. logged out, or the session
         // expired and we got the login page), so load that page normally. A
         // GET or a redirect is safe to repeat as a GET; anything else isn't.
-        if (!doc.querySelector('[data-swap]') || doc.body.dataset.layout !== document.body.dataset.layout) {
+        // Also when the page comes with a newer build of the scripts and styles
+        // (after an `npm run build` or a deploy), so an open tab doesn't keep running old code.
+        if (!doc.querySelector('[data-swap]') || doc.body.dataset.layout !== document.body.dataset.layout || assets(doc) !== assets(document)) {
             if (method === 'GET' || response.redirected) location.assign(response.url);
             else fullLoad();
             return;
@@ -119,6 +121,14 @@ function shouldHandle(link, event) {
         !link.hasAttribute('data-reload') &&
         !href.startsWith('#')
     );
+}
+
+// The built files in <head>; their names change with every build.
+function assets(doc) {
+    return [...doc.head.querySelectorAll('script[src], link[rel="stylesheet"]')]
+        .map((el) => new URL(el.getAttribute('src') ?? el.getAttribute('href'), location.href).pathname)
+        .filter((path) => path.includes('/build/'))
+        .join('|');
 }
 
 function formUrl(form) {

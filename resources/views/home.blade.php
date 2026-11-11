@@ -8,10 +8,18 @@
                 <p class="mt-4 max-w-[640px] text-lg leading-7 text-muted">Find a club to play with, a court near you, or a coach to lift your game.</p>
             </div>
 
-            <form method="GET" action="{{ route('explore.clubs') }}" class="flex min-w-0 flex-[1_1_380px] flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
+            <form method="GET" action="{{ route('play.find') }}" x-data="nearMe" class="flex min-w-0 flex-[1_1_380px] flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_32px_rgb(15_27_45/0.14)]">
+                <input type="hidden" name="lat" x-ref="lat" disabled>
+                <input type="hidden" name="lng" x-ref="lng" disabled>
                 <label for="q" class="site-h3">Find a game near you</label>
                 <input id="q" name="q" type="search" placeholder="Suburb, postcode or club name" class="site-field">
-                <button class="site-btn-ball min-h-14 text-lg">Search</button>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" class="site-btn-outline min-h-14 flex-[1_1_160px]" @click="locate()" :disabled="locating">
+                        <span x-text="locating ? 'Finding you…' : 'Use my location'">Use my location</span>
+                    </button>
+                    <button class="site-btn-ball min-h-14 flex-[1_1_160px] text-lg">Search</button>
+                </div>
+                <p x-show="problem" x-text="problem" x-cloak class="text-[#b42318]"></p>
             </form>
         </div>
     </section>

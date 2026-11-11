@@ -101,6 +101,12 @@ trait DirectoryListing
     }
 
     /** Changes whenever any venue or club is saved or deleted. */
+    /** The deepest location page this listing appears on (its suburb when all four levels are filled). */
+    public function locationArea(): ?\App\Support\Area
+    {
+        return $this->state ? \App\Support\Area::make($this->state, $this->city, $this->council, $this->suburb) : null;
+    }
+
     public static function directoryVersion(): string
     {
         return (string) Cache::get(self::VERSION_KEY, '0');

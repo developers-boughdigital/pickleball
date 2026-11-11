@@ -189,6 +189,48 @@ class LocationTest extends TestCase
         $this->post('/admin/locations/fill')->assertForbidden();
     }
 
+    public function test_search_box_goes_to_the_place_typed(): void
+    {
+        foreach ([
+            'vic' => '/play/vic',
+            'Victoria' => '/play/vic',
+            'melbourne' => '/play/vic/melbourne',
+            'Banyule' => '/play/vic/melbourne/banyule',
+            'greensborough vic' => '/play/vic/melbourne/banyule/greensborough',
+            '3084' => '/play/vic/melbourne/banyule/heidelberg',
+            '' => '/play',
+        ] as $typed => $page) {
+            $this->get('/play/find?q='.urlencode($typed))->assertRedirect(url($page));
+        }
+
+        // Not a place: search the clubs for it.
+        $this->get('/play/find?q=Dinkers')->assertRedirect(route('explore.clubs', ['q' => 'Dinkers']));
+        $this->get('/play/find?lat=-37.7&lng=145.1')->assertRedirect(route('explore.clubs', ['lat' => '-37.7', 'lng' => '145.1']));
+
+        $this->get('/play')->assertSeeInOrder(['Choose your state', 'Victoria']);
+        $this->get('/play/vic/melbourne')->assertSeeInOrder(['Choose a council area', 'Banyule', 'Darebin']);
+    }
+
+    public function test_listings_link_to_their_location_pages(): void
+    {
+        $leisure = Venue::firstWhere('name', 'Greensborough Leisure');
+        $suburbPage = url('/play/vic/melbourne/banyule/greensborough');
+
+        $this->get("/explore/venues/{$leisure->slug}")->assertOk()
+            ->assertSeeInOrder(['More places to play in', 'Victoria', 'Melbourne', 'Banyule', 'Greensborough'])
+            ->assertSee('href="'.$suburbPage.'"', false)
+            ->assertSee('href="'.url('/play/vic/melbourne').'"', false);
+        $this->get('/explore/clubs/banyule-pickleball-club')->assertSee('href="'.$suburbPage.'"', false);
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->actingAs(User::factory()->create()->assignRole(Role::SUPER_ADMIN));
+        $this->get("/admin/venues/{$leisure->slug}")->assertSee('Location pages')->assertSee('/play/vic/melbourne/banyule/greensborough');
+
+        // A level missing: say where it stops and how to fix it.
+        $leisure->forceFill(['council' => null])->saveQuietly();
+        $this->get("/admin/venues/{$leisure->slug}")->assertSee('Missing council, so it stops at the city page');
+    }
+
     public function test_fill_loads_an_empty_lookup_from_the_shipped_file(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

@@ -35,20 +35,7 @@
     :breadcrumbs="[['Home', route('home')], ['Play', route('play')], ['Coaches', route('explore.coaches')]]"
     :schema="[\App\Support\Seo\Schema::itemList('Pickleball clubs that offer coaching', $coachingClubs->map(fn ($club) => ['name' => $club->name, 'url' => route('explore.club', $club)]))]">
     <form method="GET" action="{{ route('explore.coaches') }}"
-        x-data="{
-            locating: false,
-            problem: '',
-            locate() {
-                if (! navigator.geolocation) { this.problem = 'Your browser can’t share your location.'; return; }
-                this.locating = true;
-                this.problem = '';
-                navigator.geolocation.getCurrentPosition(
-                    (spot) => { this.$refs.lat.value = spot.coords.latitude.toFixed(4); this.$refs.lng.value = spot.coords.longitude.toFixed(4); this.$el.requestSubmit(); },
-                    () => { this.locating = false; this.problem = 'We couldn’t get your location. Try a suburb instead.'; },
-                    { timeout: 10000 },
-                );
-            },
-        }"
+        x-data="nearMe('Try a suburb instead.')"
         @change="$event.target.type !== 'text' && $el.requestSubmit()"
     >
         <input type="hidden" name="lat" x-ref="lat" value="{{ $near['lat'] ?? '' }}">
