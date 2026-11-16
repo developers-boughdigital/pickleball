@@ -12,6 +12,9 @@
         ['label' => 'Clubs', 'short' => 'Clubs', 'icon' => 'users', 'rail' => 'users', 'route' => 'admin.clubs.index', 'active' => ['admin.clubs.*'], 'can' => 'clubs.view'],
         ['label' => 'Locations', 'short' => 'Places', 'icon' => 'globe', 'rail' => 'globe', 'route' => 'admin.locations', 'active' => ['admin.locations*'], 'can' => 'venues.view'],
         ['label' => 'Reports', 'short' => 'Reports', 'icon' => 'megaphone', 'rail' => 'megaphone', 'route' => 'admin.reports.index', 'active' => ['admin.reports.*'], 'can' => 'venues.view'],
+        // rescue: the sidebar is on every admin page, so a database that isn't migrated yet mustn't break it.
+        ['label' => 'Claims', 'short' => 'Claims', 'icon' => 'key', 'rail' => 'key', 'route' => 'admin.claims.index', 'active' => ['admin.claims.*'], 'can' => 'claims.view',
+            'badge' => auth()->user()?->can('claims.view') ? rescue(fn () => \App\Models\ListingClaim::pending()->count(), 0, report: false) : 0],
         ['label' => 'Import', 'short' => 'Import', 'icon' => 'upload', 'rail' => 'upload', 'route' => 'admin.import', 'active' => ['admin.import*'], 'can' => ['venues.import', 'clubs.import']],
         ['label' => 'SEO', 'short' => 'SEO', 'icon' => 'search', 'rail' => 'search', 'route' => 'admin.seo', 'active' => ['admin.seo*'], 'can' => 'settings.view'],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings', 'route' => 'admin.settings', 'active' => ['admin.settings*'], 'can' => 'settings.view'],
@@ -60,6 +63,9 @@
             ])>
                 <x-icon :name="$item['icon']" :class="$active ? 'text-ink-950' : 'text-slate-400'" />
                 <span class="whitespace-nowrap transition-opacity duration-200 lg:collapsed:opacity-0">{{ $item['label'] }}</span>
+                @if ($item['badge'] ?? 0)
+                    <span class="ml-auto rounded-full bg-brand-500 px-1.5 text-xs font-semibold text-ink-950 tabular-nums lg:collapsed:hidden" title="{{ $item['badge'] }} waiting">{{ $item['badge'] }}</span>
+                @endif
             </a>
 
             @isset($item['children'])
@@ -99,7 +105,7 @@
                 'text-slate-200 hover:bg-white/5' => ! $active,
             ])>
                 <x-icon :name="$item['rail']" :class="$active ? 'text-ink-950' : 'text-slate-300'" />
-                {{ $item['short'] }}
+                {{ $item['short'] }}{{ ($item['badge'] ?? 0) ? " ({$item['badge']})" : '' }}
             </a>
 
             @isset($item['children'])

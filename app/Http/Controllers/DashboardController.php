@@ -10,14 +10,20 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Venue;
 use App\Support\Geography;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request): View|RedirectResponse
     {
+        // Players and club people have their own page; the overview is for staff.
+        if (! $request->user()->isStaff()) {
+            return redirect()->route('account');
+        }
+
         $hour = now()->hour;
 
         // After a deploy the code can be ahead of the database. Don't touch the new

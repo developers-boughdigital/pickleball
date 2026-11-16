@@ -2,8 +2,12 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\ListingClaim;
+use App\Models\ListingRole;
 use App\Models\Locality;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -35,6 +39,17 @@ trait DirectoryListing
     ];
 
     /**
+     * Who runs the listing (plan step 5). Claimed means a club admin or venue
+     * manager was approved; suspended means claims and owner edits are switched off.
+     */
+    public const LISTING_STATUSES = [
+        'unclaimed' => 'Unclaimed',
+        'pending_claim' => 'Claim pending',
+        'claimed' => 'Claimed',
+        'suspended' => 'Suspended',
+    ];
+
+    /**
      * Publishing state. Only checked listings can be published. Hidden is a
      * listing taken off the public site after it was live; draft never was.
      */
@@ -63,6 +78,7 @@ trait DirectoryListing
         $this->attributes += [
             'record_status' => 'to_check',
             'claim_status' => 'not_contacted',
+            'listing_status' => 'unclaimed',
             'profile_tier' => 1,
             'status' => 'draft',
         ];
@@ -85,6 +101,9 @@ trait DirectoryListing
                 $listing->status = 'draft';
             }
 
+            // Imports and the admin form may send it blank.
+            $listing->listing_status = $listing->listing_status ?: 'unclaimed';
+
             // Location pages need city and council; fill them from the postcode when they're blank.
             if ($listing->isDirty(['postcode', 'suburb', 'city', 'council']) || ! $listing->exists) {
                 Locality::fillListing($listing);
@@ -100,13 +119,55 @@ trait DirectoryListing
         }
     }
 
-    /** Changes whenever any venue or club is saved or deleted. */
     /** The deepest location page this listing appears on (its suburb when all four levels are filled). */
     public function locationArea(): ?\App\Support\Area
     {
         return $this->state ? \App\Support\Area::make($this->state, $this->city, $this->council, $this->suburb) : null;
     }
 
+    public function claims(): MorphMany
+    {
+        return $this->morphMany(ListingClaim::class, 'claimable');
+    }
+
+    /** Club admins, hosts, coaches and treasurers, or the venue's managers. */
+    public function listingRoles(): MorphMany
+    {
+        return $this->morphMany(ListingRole::class, 'listing');
+    }
+
+    /** Whether the public page offers "Claim this listing". */
+    public function canBeClaimed(): bool
+    {
+        return $this->status === 'published' && in_array($this->listing_status, ['unclaimed', 'pending_claim']);
+    }
+
+    /** Club admins and venue managers can edit the listing, unless it's suspended. */
+    public function isEditableBy(?User $user): bool
+    {
+        return $user !== null && $this->listing_status !== 'suspended'
+            && $this->listingRoles()->where('user_id', $user->id)->whereIn('role', ListingRole::EDITORS)->exists();
+    }
+
+    /** Back to "unclaimed" or "claim pending" once a claim is decided or withdrawn. Claimed and suspended stay put. */
+    public function refreshListingStatus(): void
+    {
+        if (in_array($this->listing_status, ['unclaimed', 'pending_claim'])) {
+            $this->forceFill(['listing_status' => $this->claims()->pending()->exists() ? 'pending_claim' : 'unclaimed'])->save();
+        }
+    }
+
+    public function listingStatusBadge(): string
+    {
+        return match ($this->listing_status) {
+            'claimed' => 'badge-success',
+            'pending_claim' => 'badge-pending',
+            'suspended' => 'badge-danger',
+            default => 'badge-muted',
+        };
+    }
+
+    /** Changes whenever any venue or club is saved or deleted. */
     public static function directoryVersion(): string
     {
         return (string) Cache::get(self::VERSION_KEY, '0');

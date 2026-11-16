@@ -143,13 +143,13 @@ class ClubController extends Controller implements HasMiddleware
             ->implode(', ');
     }
 
-    /** @return array{search: ?string, state: ?string, record_status: ?string, status: ?string} */
     /** Publish, hide or return to draft: one club, the ticked rows, or all matching the filters. */
     public function status(Request $request): RedirectResponse
     {
         return $this->changeStatus($request, $this->filtered($this->filters($request)), 'club');
     }
 
+    /** @return array{search: ?string, state: ?string, record_status: ?string, status: ?string, listing_status: ?string} */
     private function filters(Request $request): array
     {
         $pick = fn (string $key, array $options) => array_key_exists((string) $request->query($key), $options) ? $request->query($key) : null;
@@ -159,6 +159,7 @@ class ClubController extends Controller implements HasMiddleware
             'state' => in_array($request->query('state'), Club::STATES) ? $request->query('state') : null,
             'record_status' => $pick('record_status', Club::RECORD_STATUSES),
             'status' => $pick('status', Club::STATUSES),
+            'listing_status' => $pick('listing_status', Club::LISTING_STATUSES),
         ];
     }
 
@@ -169,6 +170,7 @@ class ClubController extends Controller implements HasMiddleware
             ->search($filters['search'])
             ->when($filters['state'], fn (Builder $query, string $state) => $query->where('state', $state))
             ->when($filters['record_status'], fn (Builder $query, string $status) => $query->where('record_status', $status))
-            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status));
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($filters['listing_status'], fn (Builder $query, string $status) => $query->where('listing_status', $status));
     }
 }

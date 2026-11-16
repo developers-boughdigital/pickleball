@@ -59,6 +59,7 @@
         <x-admin.select name="setting" :options="Venue::SETTINGS" :selected="$filters['setting']" placeholder="Indoor & outdoor" />
         <x-admin.select name="record_status" :options="Venue::RECORD_STATUSES" :selected="$filters['record_status']" placeholder="Any record status" />
         <x-admin.select name="status" :options="Venue::STATUSES" :selected="$filters['status']" placeholder="Any status" />
+        <x-admin.select name="listing_status" :options="Venue::LISTING_STATUSES" :selected="$filters['listing_status']" placeholder="Claimed or not" />
     </form>
 
     <div class="card mt-3 overflow-hidden" x-data="publishing(@js($venues->pluck('id')))">

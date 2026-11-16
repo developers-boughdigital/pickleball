@@ -171,6 +171,8 @@
                 </dl>
             </section>
 
+            <x-admin.listing-managers :listing="$club" />
+
             <section class="card p-4 sm:p-5">
                 <h2 class="mb-3 text-sm font-semibold">Verification</h2>
                 <dl class="space-y-2 text-sm">

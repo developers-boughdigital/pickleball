@@ -29,6 +29,7 @@ class RegisterController extends Controller
 
         ActivityLog::record('auth.registered', "Registered as {$user->email}", $user, $user->name);
 
-        return redirect()->route('dashboard')->with('status', 'Welcome, '.$user->name.'! Your account has been created.');
+        // Back to what they were doing, e.g. the claim form that sent them here.
+        return redirect()->intended(route('dashboard'))->with('status', 'Welcome, '.$user->name.'! Your account has been created.');
     }
 }

@@ -152,7 +152,10 @@
             </section>
         </div>
 
-        <section class="card self-start p-4 sm:p-5">
+        <div class="space-y-3 self-start">
+        <x-admin.listing-managers :listing="$venue" />
+
+        <section class="card p-4 sm:p-5">
             <h2 class="mb-3 text-sm font-semibold">Verification</h2>
             <dl class="space-y-2 text-sm">
                 @foreach ([
@@ -182,5 +185,6 @@
                 <p class="mt-3 rounded-lg bg-amber-50 p-3 text-xs break-words whitespace-pre-line text-amber-900">{{ $venue->notes }}</p>
             @endif
         </section>
+        </div>
     </div>
 </x-admin.layout>

@@ -62,6 +62,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'clubs.export' => 'Export clubs and club–venue links to a spreadsheet',
             'clubs.publish' => 'Publish and hide checked clubs on the public site',
         ],
+        'Claims' => [
+            'claims.view' => 'See the claims queue',
+            'claims.decide' => 'Approve or reject claims, which makes the claimant a club admin or venue manager',
+        ],
         'System Settings' => [
             'settings.view' => 'View system settings',
             'settings.update' => 'Change system settings',

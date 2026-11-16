@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -47,6 +48,27 @@ class User extends Authenticatable
             ->take(2)
             ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))
             ->implode('');
+    }
+
+    public function listingClaims(): HasMany
+    {
+        return $this->hasMany(ListingClaim::class);
+    }
+
+    /** Clubs they help run and venues they manage. */
+    public function listingRoles(): HasMany
+    {
+        return $this->hasMany(ListingRole::class);
+    }
+
+    /**
+     * Staff have a role or a permission of some kind; they get the admin.
+     * Players and club people have neither (club admins are listing roles, not
+     * staff roles) and get their account page.
+     */
+    public function isStaff(): bool
+    {
+        return $this->roles->isNotEmpty() || $this->permissions->isNotEmpty();
     }
 
     /**

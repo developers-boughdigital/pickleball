@@ -22,7 +22,10 @@ class AdminPagesTest extends TestCase
 
     public function test_signed_in_users_can_see_the_home_page(): void
     {
-        $this->actingAs(User::factory()->create())->get('/')->assertOk()->assertSee(route('dashboard'));
+        // Players get their account; staff (anyone with a role) get the admin.
+        $this->actingAs(User::factory()->create())->get('/')->assertOk()->assertSee(route('account'))->assertDontSee(route('dashboard'));
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->actingAs(User::factory()->create()->assignRole('Viewer'))->get('/')->assertSee(route('dashboard'));
     }
 
     public function test_dashboard_shows_real_counts_activity_and_roles(): void
@@ -46,7 +49,11 @@ class AdminPagesTest extends TestCase
 
     public function test_dashboard_works_with_an_empty_database(): void
     {
-        $this->actingAs(User::factory()->create())
+        // Staff with a permission but no role yet, on a database with nothing else in it.
+        $staff = User::factory()->create();
+        $staff->givePermissionTo(\App\Models\Permission::create(['name' => 'dashboard.view', 'guard_name' => 'web', 'module' => 'Dashboard']));
+
+        $this->actingAs($staff)
             ->get('/dashboard')
             ->assertOk()
             ->assertSee('No activity yet')

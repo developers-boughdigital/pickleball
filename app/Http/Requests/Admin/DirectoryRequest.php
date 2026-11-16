@@ -89,6 +89,8 @@ abstract class DirectoryRequest extends FormRequest
             'checked_by' => static::textRule(100),
             'profile_tier' => ['required', 'integer', 'between:1,9'],
             'claim_status' => ['required', Rule::in(array_keys(Venue::CLAIM_STATUSES))],
+            // Optional so spreadsheets without the column still import; blank means unclaimed.
+            'listing_status' => ['nullable', Rule::in(array_keys(Venue::LISTING_STATUSES))],
             'enriched_at' => ['nullable', 'date'],
             'notes' => static::textRule(5000),
             'meta_title' => static::textRule(70),
@@ -123,6 +125,7 @@ abstract class DirectoryRequest extends FormRequest
             'checked_by' => 'Checked by',
             'profile_tier' => 'Profile tier',
             'claim_status' => 'Claim status',
+            'listing_status' => 'Listing status',
             'enriched_at' => 'Date enriched',
             'notes' => 'Notes',
             'meta_title' => 'Search title',

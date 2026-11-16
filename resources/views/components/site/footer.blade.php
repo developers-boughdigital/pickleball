@@ -30,7 +30,8 @@
         </nav>
         <nav aria-label="For clubs and coaches" class="flex flex-col gap-2">
             <span class="font-bold">Clubs and coaches</span>
-            <a href="{{ route('login') }}" class="text-[#eef2f8] hover:text-ball">Claim your club page</a>
+            {{-- Find the club, then "Claim this listing" on its page. --}}
+            <a href="{{ route('explore.clubs') }}" class="text-[#eef2f8] hover:text-ball">Claim your club page</a>
             <a href="{{ route('explore.coaches') }}#list-yourself" class="text-[#eef2f8] hover:text-ball">List yourself as a coach</a>
             <span class="text-[#a9b6cb]">&copy; {{ date('Y') }} {{ config('app.name') }}</span>
         </nav>

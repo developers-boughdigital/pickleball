@@ -153,6 +153,8 @@
                     @endunless
                 </ul>
             </section>
+
+            <x-site.claim-box :listing="$venue" kind="venue" />
         </aside>
     </div>
 </x-site>

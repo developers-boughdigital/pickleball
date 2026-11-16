@@ -58,6 +58,7 @@ class Club extends Model
         'booking_method' => self::BOOKING_METHODS,
         'record_status' => self::RECORD_STATUSES,
         'claim_status' => self::CLAIM_STATUSES,
+        'listing_status' => self::LISTING_STATUSES,
         'status' => self::STATUSES,
     ];
 

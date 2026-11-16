@@ -155,6 +155,8 @@
                     @endunless
                 </ul>
             </section>
+
+            <x-site.claim-box :listing="$club" kind="club" />
         </aside>
     </div>
 </x-site>

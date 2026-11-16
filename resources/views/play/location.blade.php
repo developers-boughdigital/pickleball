@@ -432,8 +432,8 @@
                         @endif
                         <div class="mt-auto flex flex-wrap items-center gap-3">
                             <a href="{{ route('explore.club', [$club, ...$keep]) }}" class="site-btn-primary">See club</a>
-                            @if (in_array($club->claim_status, ['not_contacted', 'invited']))
-                                <a href="{{ route('login') }}" class="site-link">Run this club? Claim it</a>
+                            @if ($club->canBeClaimed())
+                                <a href="{{ route('claims.create', ['club', $club]) }}" class="site-link" rel="nofollow">Run this club? Claim it</a>
                             @endif
                         </div>
                     </article>

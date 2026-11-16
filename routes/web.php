@@ -22,6 +22,10 @@ use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Admin\SeoController;
+use App\Http\Controllers\Admin\ClaimController as AdminClaimController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ClaimController;
+use App\Http\Controllers\ManageListingController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +70,14 @@ Route::middleware(['guest', 'cache.headers:no_store;private'])->group(function (
 Route::middleware('auth')->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
+    // Players and club people: their account, claims, and the listings they run.
+    Route::get('account', [AccountController::class, 'show'])->name('account');
+    Route::get('claim/{kind}/{slug}', [ClaimController::class, 'create'])->whereIn('kind', ['club', 'venue'])->name('claims.create');
+    Route::post('claim/{kind}/{slug}', [ClaimController::class, 'store'])->whereIn('kind', ['club', 'venue'])->middleware('throttle:10,60')->name('claims.store');
+    Route::delete('claims/{claim}', [ClaimController::class, 'destroy'])->name('claims.destroy');
+    Route::get('manage/{kind}/{slug}', [ManageListingController::class, 'edit'])->whereIn('kind', ['club', 'venue'])->name('manage.edit');
+    Route::put('manage/{kind}/{slug}', [ManageListingController::class, 'update'])->whereIn('kind', ['club', 'venue'])->name('manage.update');
+
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('roles', RoleController::class)->except('show');
@@ -84,6 +96,10 @@ Route::middleware('auth')->group(function () {
         Route::post('locations/fill', [AdminLocationController::class, 'fill'])->middleware('permission:venues.update')->name('locations.fill');
         Route::get('reports', [AdminListingReportController::class, 'index'])->middleware('permission:venues.view')->name('reports.index');
         Route::patch('reports/{report}', [AdminListingReportController::class, 'update'])->middleware('permission:venues.update')->name('reports.update');
+
+        Route::get('claims', [AdminClaimController::class, 'index'])->middleware('permission:claims.view')->name('claims.index');
+        Route::post('claims/{claim}/approve', [AdminClaimController::class, 'approve'])->middleware('permission:claims.decide')->name('claims.approve');
+        Route::post('claims/{claim}/reject', [AdminClaimController::class, 'reject'])->middleware('permission:claims.decide')->name('claims.reject');
 
         Route::controller(ImportController::class)->group(function () {
             Route::get('import', 'index')->name('import');

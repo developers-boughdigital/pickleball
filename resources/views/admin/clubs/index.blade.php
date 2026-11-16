@@ -61,6 +61,7 @@
         <x-admin.select name="state" :options="array_combine(Club::STATES, Club::STATES)" :selected="$filters['state']" placeholder="All states" />
         <x-admin.select name="record_status" :options="Club::RECORD_STATUSES" :selected="$filters['record_status']" placeholder="Any record status" />
         <x-admin.select name="status" :options="Club::STATUSES" :selected="$filters['status']" placeholder="Any status" />
+        <x-admin.select name="listing_status" :options="Club::LISTING_STATUSES" :selected="$filters['listing_status']" placeholder="Claimed or not" />
     </form>
 
     <div class="card mt-3 overflow-hidden" x-data="publishing(@js($clubs->pluck('id')))">

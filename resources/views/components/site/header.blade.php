@@ -48,7 +48,11 @@
 
         <div id="site-account" data-swap class="hidden gap-2 sm:flex" :class="open && '!flex'">
             @auth
-                <a href="{{ route('dashboard') }}" data-reload class="site-btn-outline">Admin</a>
+                @if (auth()->user()->isStaff())
+                    <a href="{{ route('dashboard') }}" data-reload class="site-btn-outline">Admin</a>
+                @else
+                    <a href="{{ route('account') }}" @class(['site-btn-outline', 'site-chip-on' => request()->routeIs('account', 'manage.*', 'claims.*')])>My account</a>
+                @endif
             @else
                 <a href="{{ route('login') }}" @class(['site-btn-outline', 'site-chip-on' => request()->routeIs('login')])>Log in</a>
                 <a href="{{ route('register') }}" class="site-btn-primary">Register</a>

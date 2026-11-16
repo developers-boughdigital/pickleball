@@ -178,6 +178,10 @@
                     <p x-show="recordStatus !== 'checked'" class="mt-1 text-xs text-slate-500">Can be published once the record status is Checked.</p>
                 </div>
                 <x-admin.field-select name="claim_status" label="Claim status" :options="Club::CLAIM_STATUSES" :selected="$value('claim_status')" :placeholder="false" />
+                <div>
+                    <x-admin.field-select name="listing_status" label="Listing status" :options="Club::LISTING_STATUSES" :selected="$value('listing_status') ?? 'unclaimed'" :placeholder="false" />
+                    <p class="mt-1 text-xs text-slate-500">Claims set this. Suspended stops claims and owner edits.</p>
+                </div>
                 <x-admin.input name="profile_tier" label="Profile tier" type="number" min="1" max="9" :value="$value('profile_tier')" hint="1 basic, 2 enriched from the website." />
                 <x-admin.input name="source_type" label="Source type" :value="$value('source_type')" maxlength="255" placeholder="Own website" />
                 <x-admin.input name="source_url" label="Source URL" icon="globe" :value="$value('source_url')" maxlength="500" placeholder="https:// or where it came from" />

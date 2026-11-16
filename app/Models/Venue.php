@@ -70,6 +70,7 @@ class Venue extends Model
         'court_lines' => self::COURT_LINES,
         'record_status' => self::RECORD_STATUSES,
         'claim_status' => self::CLAIM_STATUSES,
+        'listing_status' => self::LISTING_STATUSES,
         'status' => self::STATUSES,
     ];
 
