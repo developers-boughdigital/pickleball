@@ -65,4 +65,21 @@
             @endforelse
         </ul>
     </section>
+
+    {{-- For club committees and venue staff: find your listing, then "Claim this listing" on its page. --}}
+    <section class="site-wrap pb-16">
+        <div class="flex flex-wrap items-center justify-between gap-6 rounded-[20px] bg-navy p-8 text-white sm:p-10">
+            <div class="max-w-[620px]">
+                <h2 class="font-display text-4xl leading-[42px] font-bold">Run a club or a venue?</h2>
+                <p class="mt-3 text-lg leading-7 text-[#c9d3e3]">
+                    Your club or courts may already be listed. Claim the listing for free to keep your sessions, fees, prices and contacts up to date.
+                    Our team checks every claim by hand.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('explore.clubs') }}" class="site-btn-ball min-h-14 px-6 text-lg">Find your club</a>
+                <a href="{{ route('explore.venues') }}" class="site-btn min-h-14 border-2 border-white px-6 text-lg text-white hover:bg-white/10">Find your venue</a>
+            </div>
+        </div>
+    </section>
 </x-site>

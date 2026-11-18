@@ -41,6 +41,13 @@
         </ul>
     @endif
 
+    @if ($venue->listing_status === 'claimed')
+        <p class="inline-flex items-center gap-1.5 text-gum-text"><x-icon name="check" class="size-4" /> Managed by the venue</p>
+    @elseif ($venue->canBeClaimed())
+        {{-- relative z-10: above the link that makes the whole card clickable. --}}
+        <a href="{{ route('claims.create', ['venue', $venue]) }}" class="site-link relative z-10 self-start" rel="nofollow">Manage this venue? Claim it</a>
+    @endif
+
     <div class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
         <span class="text-muted">
             @if ($venue->clubs_count)

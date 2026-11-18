@@ -92,6 +92,52 @@
         </div>
     @endif
 
+    @if ($claims)
+        <div class="mt-5 flex items-center justify-between gap-3">
+            <h2 class="text-sm font-semibold text-slate-500">Claims</h2>
+            <a href="{{ route('admin.claims.index') }}" class="text-xs font-medium text-brand-600 hover:underline">Open the claims queue</a>
+        </div>
+        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <a href="{{ route('admin.claims.index') }}" @class(['card block p-4 transition hover:border-brand-300', 'ring-2 ring-amber-300' => $claims['waiting']])>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Claims to review</p>
+                    <x-icon name="key" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($claims['waiting']) }}</p>
+                <p @class(['mt-0.5 text-xs', 'text-amber-600' => $claims['waiting'], 'text-brand-600' => ! $claims['waiting']])>
+                    {{ $claims['waiting'] ? 'People asking to run a club or venue' : 'Nothing waiting' }}
+                </p>
+            </a>
+            <a href="{{ route('admin.clubs.index', ['listing_status' => 'claimed']) }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Clubs run by the club</p>
+                    <x-icon name="users" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($claims['claimedClubs']) }}</p>
+                <p class="mt-0.5 text-xs text-brand-600">{{ number_format($claims['claimable']) }} published clubs still to claim</p>
+            </a>
+            <a href="{{ route('admin.venues.index', ['listing_status' => 'claimed']) }}" class="card block p-4 transition hover:border-brand-300">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Venues with a manager</p>
+                    <x-icon name="map-pin" class="text-brand-500" />
+                </div>
+                <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($claims['claimedVenues']) }}</p>
+                <p class="mt-0.5 text-xs text-brand-600">Claimed and approved</p>
+            </a>
+            <div class="card p-4">
+                <p class="text-sm text-slate-500">Waiting longest</p>
+                @forelse ($claims['oldest'] as $claim)
+                    <a href="{{ route('admin.claims.index') }}" class="mt-1.5 flex items-center justify-between gap-2 text-sm hover:text-brand-600">
+                        <span class="min-w-0 truncate"><span class="font-medium">{{ $claim->claimable->name }}</span> <span class="text-xs text-slate-500">{{ $claim->user?->name }}</span></span>
+                        <span class="shrink-0 text-xs text-slate-500">{{ $claim->created_at->diffForHumans(short: true) }}</span>
+                    </a>
+                @empty
+                    <p class="mt-1.5 text-sm text-slate-500">No claims yet. They come from “Claim this listing” on club and venue pages.</p>
+                @endforelse
+            </div>
+        </div>
+    @endif
+
     <div class="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {{-- Recent activity --}}
         <section class="card min-w-0 p-4 sm:p-5">

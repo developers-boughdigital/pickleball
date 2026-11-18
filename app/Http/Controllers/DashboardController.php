@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Club;
+use App\Models\ListingClaim;
 use App\Models\ListingReport;
 use App\Models\Permission;
 use App\Models\Role;
@@ -55,6 +56,14 @@ class DashboardController extends Controller
                 'clubsLive' => Club::where('status', 'published')->count(),
                 'locations' => Geography::coverage()['venues'],
                 'openReports' => ListingReport::where('status', 'open')->count(),
+            ] : null,
+            // Step 14: who's asking to run a club or venue, and how many are run by their owners.
+            'claims' => ! $pending && $request->user()->can('claims.view') ? [
+                'waiting' => ListingClaim::pending()->count(),
+                'oldest' => ListingClaim::pending()->with(['claimable', 'user'])->oldest()->take(3)->get()->filter(fn ($claim) => $claim->claimable),
+                'claimedClubs' => Club::where('listing_status', 'claimed')->count(),
+                'claimedVenues' => Venue::where('listing_status', 'claimed')->count(),
+                'claimable' => Club::where('status', 'published')->whereIn('listing_status', ['unclaimed', 'pending_claim'])->count(),
             ] : null,
             'recentActivity' => ActivityLog::with('user')->latest('created_at')->latest('id')->take(6)->get(),
             'newestUsers' => User::with('roles')->latest()->take(5)->get(),

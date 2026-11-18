@@ -51,6 +51,7 @@
                     @endif
                 </div>
             </div>
+            <x-site.claim-box :listing="$venue" kind="venue" class="mt-5" />
         </div>
     </section>
 
@@ -153,8 +154,6 @@
                     @endunless
                 </ul>
             </section>
-
-            <x-site.claim-box :listing="$venue" kind="venue" />
         </aside>
     </div>
 </x-site>

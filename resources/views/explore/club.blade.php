@@ -52,6 +52,7 @@
                     @endif
                 </div>
             </div>
+            <x-site.claim-box :listing="$club" kind="club" class="mt-5" />
         </div>
     </section>
 
@@ -155,8 +156,6 @@
                     @endunless
                 </ul>
             </section>
-
-            <x-site.claim-box :listing="$club" kind="club" />
         </aside>
     </div>
 </x-site>
