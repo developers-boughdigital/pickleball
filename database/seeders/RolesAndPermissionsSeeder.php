@@ -66,6 +66,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'claims.view' => 'See the claims queue',
             'claims.decide' => 'Approve or reject claims, which makes the claimant a club admin or venue manager',
         ],
+        'Articles' => [
+            'articles.view' => 'See articles, the editorial calendar, categories and tags',
+            'articles.create' => 'Start articles, by hand or with Claude',
+            'articles.update' => 'Edit articles, and manage the calendar, categories and tags',
+            'articles.publish' => 'Publish, schedule and unpublish articles',
+            'articles.delete' => 'Delete articles',
+        ],
         'System Settings' => [
             'settings.view' => 'View system settings',
             'settings.update' => 'Change system settings',

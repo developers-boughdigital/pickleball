@@ -7,6 +7,10 @@
         'explore.venues' => ['Venues', request()->routeIs('explore.venues', 'explore.venue')],
         'explore.coaches' => ['Coaches', request()->routeIs('explore.coaches')],
     ];
+    // rescue: this header is on every public page, so a database that isn't migrated yet mustn't break it.
+    if (rescue(fn () => \App\Models\Article::live()->exists(), false, report: false)) {
+        $nav['learn'] = ['Learn', request()->routeIs('learn', 'learn.*')];
+    }
     preg_match('/^(.*\S)(\s+\S+|[A-Z][^A-Z\s]*)$/u', config('app.name'), $name);
 @endphp
 

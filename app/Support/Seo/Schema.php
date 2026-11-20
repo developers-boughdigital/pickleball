@@ -2,6 +2,7 @@
 
 namespace App\Support\Seo;
 
+use App\Models\Article;
 use App\Models\Club;
 use App\Models\Venue;
 use Illuminate\Support\Collection;
@@ -145,6 +146,26 @@ final class Schema
                 'url' => $venueUrl($venue),
                 'address' => self::address($venue->street_address, $venue->suburb, $venue->state, $venue->postcode),
             ]))->values()->all(),
+        ]);
+    }
+
+    public static function article(Article $article, string $url, string $description): array
+    {
+        return self::clean([
+            '@type' => 'Article',
+            '@id' => $url.'#article',
+            'headline' => $article->title,
+            'description' => $description,
+            'image' => $article->imageUrl(),
+            'datePublished' => $article->published_at?->toW3cString(),
+            'dateModified' => $article->updated_at?->toW3cString(),
+            'author' => $article->author ? ['@type' => 'Person', 'name' => $article->author->name] : ['@id' => self::organizationId()],
+            'publisher' => ['@id' => self::organizationId()],
+            'mainEntityOfPage' => $url,
+            'articleSection' => $article->category?->name,
+            'keywords' => $article->tags->pluck('name')->implode(', '),
+            'wordCount' => $article->wordCount(),
+            'inLanguage' => 'en-AU',
         ]);
     }
 

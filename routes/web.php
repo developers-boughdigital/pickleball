@@ -26,6 +26,10 @@ use App\Http\Controllers\Admin\ClaimController as AdminClaimController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\ManageListingController;
+use App\Http\Controllers\Admin\ArticleController;
+use App\Http\Controllers\Admin\ArticleTaxonomyController;
+use App\Http\Controllers\Admin\EditorialCalendarController;
+use App\Http\Controllers\LearnController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +48,10 @@ Route::get('sitemaps/{type}.xml', [SitemapController::class, 'show'])->name('sit
 Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 Route::post('reports', [ListingReportController::class, 'store'])->middleware('throttle:5,60')->name('reports.store');
+
+// Articles written in Admin › Articles.
+Route::get('learn', [LearnController::class, 'index'])->name('learn');
+Route::get('learn/{slug}', [LearnController::class, 'show'])->name('learn.show');
 
 // The public directory.
 Route::controller(ExploreController::class)->prefix('explore')->name('explore')->group(function () {
@@ -100,6 +108,32 @@ Route::middleware('auth')->group(function () {
         Route::get('claims', [AdminClaimController::class, 'index'])->middleware('permission:claims.view')->name('claims.index');
         Route::post('claims/{claim}/approve', [AdminClaimController::class, 'approve'])->middleware('permission:claims.decide')->name('claims.approve');
         Route::post('claims/{claim}/reject', [AdminClaimController::class, 'reject'])->middleware('permission:claims.decide')->name('claims.reject');
+
+        // The article studio. Calendar, categories and tags come before the resource, so "calendar" isn't read as an article id.
+        Route::controller(EditorialCalendarController::class)->prefix('articles/calendar')->name('articles.calendar')->group(function () {
+            Route::get('/', 'index')->middleware('permission:articles.view');
+            Route::post('/', 'store')->middleware('permission:articles.update')->name('.store');
+            Route::put('{plan}', 'update')->middleware('permission:articles.update')->name('.update');
+            Route::delete('{plan}', 'destroy')->middleware('permission:articles.update')->name('.destroy');
+        });
+        Route::controller(ArticleTaxonomyController::class)->prefix('articles')->name('articles.')->group(function () {
+            Route::get('categories', 'categories')->middleware('permission:articles.view')->name('categories');
+            Route::get('tags', 'tags')->middleware('permission:articles.view')->name('tags');
+
+            Route::middleware('permission:articles.update')->group(function () {
+                Route::post('categories', 'storeCategory')->name('categories.store');
+                Route::put('categories/{category}', 'updateCategory')->name('categories.update');
+                Route::delete('categories/{category}', 'destroyCategory')->name('categories.destroy');
+                Route::post('tags', 'storeTag')->name('tags.store');
+                Route::put('tags/{tag}', 'updateTag')->name('tags.update');
+                Route::delete('tags/{tag}', 'destroyTag')->name('tags.destroy');
+            });
+        });
+        Route::post('articles/{article}/write', [ArticleController::class, 'write'])->name('articles.write');
+        Route::put('articles/{article}/brief', [ArticleController::class, 'brief'])->name('articles.brief');
+        Route::get('articles/{article}/revisions', [ArticleController::class, 'revisions'])->name('articles.revisions');
+        Route::post('articles/{article}/revisions/{revision}/restore', [ArticleController::class, 'restore'])->name('articles.restore');
+        Route::resource('articles', ArticleController::class)->except('show');
 
         Route::controller(ImportController::class)->group(function () {
             Route::get('import', 'index')->name('import');

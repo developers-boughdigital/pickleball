@@ -138,6 +138,47 @@
         </div>
     @endif
 
+    @if ($articles)
+        <div class="mt-5 flex items-center justify-between gap-3">
+            <h2 class="text-sm font-semibold text-slate-500">Articles</h2>
+            @can('articles.create')
+                <a href="{{ route('admin.articles.create') }}" class="text-xs font-medium text-brand-600 hover:underline">New article with Claude</a>
+            @endcan
+        </div>
+        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach (['draft' => ['Drafts', 'pencil', 'Being written or waiting for review'], 'scheduled' => ['Scheduled', 'clock', null], 'published' => ['Published', 'globe', 'Live in the Learn section']] as $status => [$label, $icon, $note])
+                <a href="{{ route('admin.articles.index', ['status' => $status]) }}" class="card block p-4 transition hover:border-brand-300">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-slate-500">{{ $label }}</p>
+                        <x-icon :name="$icon" class="text-brand-500" />
+                    </div>
+                    <p class="mt-1 text-2xl font-bold tracking-tight">{{ number_format($articles['counts'][$status] ?? 0) }}</p>
+                    <p class="mt-0.5 truncate text-xs text-brand-600">
+                        @if ($status === 'scheduled')
+                            {{ $articles['next'] ? 'Next: '.$articles['next']->published_at->format('j M, g:i A') : 'Nothing scheduled' }}
+                        @else
+                            {{ $note }}
+                        @endif
+                    </p>
+                </a>
+            @endforeach
+            <div class="card p-4">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-slate-500">Planned next</p>
+                    <a href="{{ route('admin.articles.calendar') }}" class="text-xs font-medium text-brand-600 hover:underline">Calendar</a>
+                </div>
+                @forelse ($articles['planned'] as $plan)
+                    <a href="{{ route('admin.articles.calendar', ['month' => $plan->planned_for->format('Y-m')]) }}" class="mt-1.5 flex items-center justify-between gap-2 text-sm hover:text-brand-600">
+                        <span class="min-w-0 truncate font-medium">{{ $plan->topic }}</span>
+                        <span class="shrink-0 text-xs text-slate-500">{{ $plan->planned_for->format('j M') }}</span>
+                    </a>
+                @empty
+                    <p class="mt-1.5 text-sm text-slate-500">Nothing planned. Add topics on the calendar.</p>
+                @endforelse
+            </div>
+        </div>
+    @endif
+
     <div class="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {{-- Recent activity --}}
         <section class="card min-w-0 p-4 sm:p-5">

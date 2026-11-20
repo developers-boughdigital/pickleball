@@ -104,7 +104,8 @@ export function start() {
 
         // POST, with Laravel's _method field carrying PUT/DELETE. Laravel answers
         // with a redirect, which fetch follows, so we swap in the page it lands on.
-        visit(form.action, {
+        // getAttribute, not form.action: a field named "action" in the form would shadow the property.
+        visit(form.getAttribute('action') || location.href, {
             method: 'POST',
             body: new FormData(form, event.submitter),
             fallback: () => HTMLFormElement.prototype.submit.call(form),

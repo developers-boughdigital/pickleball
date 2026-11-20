@@ -40,7 +40,7 @@
     "src": "node_modules/leaflet/dist/leaflet.css"
   },
   "resources/css/app.css": {
-    "file": "assets/app-Bd_dFS5g.css",
+    "file": "assets/app-DCIT8sms.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -49,13 +49,20 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-Bsmhnu2I.js",
+    "file": "assets/app-DGhP3gX1.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "dynamicImports": [
       "_leaflet-src-BkyRHh36.js",
-      "_leaflet.markercluster-src-D-Bjqioe.js"
+      "_leaflet.markercluster-src-D-Bjqioe.js",
+      "resources/js/editor.js"
     ]
+  },
+  "resources/js/editor.js": {
+    "file": "assets/editor-D_wzl23t.js",
+    "name": "editor",
+    "src": "resources/js/editor.js",
+    "isDynamicEntry": true
   }
 }

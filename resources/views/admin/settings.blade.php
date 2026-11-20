@@ -2,6 +2,7 @@
     $canEdit = auth()->user()->can('settings.update');
     $logoUrl = $settings['logo'] ? asset($settings['logo']) : null;
     $googleOn = filled($settings['google_client_id']) && filled($settings['google_client_secret']);
+    $claudeOn = filled($settings['anthropic_api_key']);
 @endphp
 
 <x-admin.layout title="System Settings" :breadcrumb="['System', 'Settings']">
@@ -131,6 +132,38 @@
                             <span x-text="copied ? 'Copied' : 'Copy'">Copy</span>
                         </button>
                     </div>
+                </div>
+            </section>
+
+            {{-- Claude --}}
+            <section class="card p-4 sm:p-5">
+                <div class="mb-1 flex items-center justify-between gap-3">
+                    <h2 class="text-sm font-semibold">Claude, for writing articles</h2>
+                    <span class="{{ $claudeOn ? 'badge-success' : 'badge-muted' }}">{{ $claudeOn ? 'Connected' : 'Not connected' }}</span>
+                </div>
+                <p class="mb-3 text-xs text-slate-500">
+                    Articles › New article asks Claude for a first draft. It needs an API key from
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="font-medium text-brand-600 hover:underline">console.anthropic.com</a>.
+                    Each draft is billed to that Anthropic account.
+                </p>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-admin.input
+                        name="anthropic_api_key"
+                        label="Anthropic API key"
+                        type="password"
+                        icon="key"
+                        maxlength="255"
+                        autocomplete="new-password"
+                        :placeholder="$claudeOn ? 'Saved. Leave blank to keep it' : 'sk-ant-…'"
+                    />
+                    @if ($claudeOn)
+                        <label class="flex items-center gap-2 text-sm sm:mt-6">
+                            <input type="hidden" name="remove_anthropic_api_key" value="0">
+                            <input type="checkbox" name="remove_anthropic_api_key" value="1" class="size-4 accent-brand-500">
+                            Remove the saved key
+                        </label>
+                    @endif
                 </div>
             </section>
         </fieldset>

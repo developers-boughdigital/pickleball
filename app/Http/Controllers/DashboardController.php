@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Article;
+use App\Models\EditorialPlan;
 use App\Models\Club;
 use App\Models\ListingClaim;
 use App\Models\ListingReport;
@@ -58,6 +60,11 @@ class DashboardController extends Controller
                 'openReports' => ListingReport::where('status', 'open')->count(),
             ] : null,
             // Step 14: who's asking to run a club or venue, and how many are run by their owners.
+            'articles' => ! $pending && $request->user()->can('articles.view') ? [
+                'counts' => Article::query()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
+                'next' => Article::where('status', 'scheduled')->where('published_at', '>', now())->oldest('published_at')->first(),
+                'planned' => EditorialPlan::whereNull('article_id')->where('planned_for', '>=', today())->orderBy('planned_for')->take(3)->get(),
+            ] : null,
             'claims' => ! $pending && $request->user()->can('claims.view') ? [
                 'waiting' => ListingClaim::pending()->count(),
                 'oldest' => ListingClaim::pending()->with(['claimable', 'user'])->oldest()->take(3)->get()->filter(fn ($claim) => $claim->claimable),

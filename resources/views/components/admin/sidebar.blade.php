@@ -15,6 +15,11 @@
         // rescue: the sidebar is on every admin page, so a database that isn't migrated yet mustn't break it.
         ['label' => 'Claims', 'short' => 'Claims', 'icon' => 'key', 'rail' => 'key', 'route' => 'admin.claims.index', 'active' => ['admin.claims.*'], 'can' => 'claims.view',
             'badge' => auth()->user()?->can('claims.view') ? rescue(fn () => \App\Models\ListingClaim::pending()->count(), 0, report: false) : 0],
+        ['label' => 'Articles', 'short' => 'Articles', 'icon' => 'align-left', 'rail' => 'align-left', 'route' => 'admin.articles.index', 'active' => ['admin.articles.index', 'admin.articles.create', 'admin.articles.edit', 'admin.articles.revisions'], 'can' => 'articles.view', 'children' => [
+            ['label' => 'Calendar', 'route' => 'admin.articles.calendar', 'active' => ['admin.articles.calendar*']],
+            ['label' => 'Categories', 'route' => 'admin.articles.categories', 'active' => ['admin.articles.categories*']],
+            ['label' => 'Tags', 'route' => 'admin.articles.tags', 'active' => ['admin.articles.tags*']],
+        ]],
         ['label' => 'Import', 'short' => 'Import', 'icon' => 'upload', 'rail' => 'upload', 'route' => 'admin.import', 'active' => ['admin.import*'], 'can' => ['venues.import', 'clubs.import']],
         ['label' => 'SEO', 'short' => 'SEO', 'icon' => 'search', 'rail' => 'search', 'route' => 'admin.seo', 'active' => ['admin.seo*'], 'can' => 'settings.view'],
         ['label' => 'System Settings', 'short' => 'Settings', 'icon' => 'sliders', 'rail' => 'settings', 'route' => 'admin.settings', 'active' => ['admin.settings*'], 'can' => 'settings.view'],

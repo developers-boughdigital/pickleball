@@ -28,10 +28,11 @@ class Setting extends Model
         'google_client_id' => 'services.google.client_id',
         'google_client_secret' => 'services.google.client_secret',
         'google_redirect' => 'services.google.redirect',
+        'anthropic_api_key' => 'services.anthropic.key',
     ];
 
     /** Stored encrypted with APP_KEY. */
-    public const SECRET = ['google_client_secret'];
+    public const SECRET = ['google_client_secret', 'anthropic_api_key'];
 
     /**
      * Saved settings, secrets decrypted.

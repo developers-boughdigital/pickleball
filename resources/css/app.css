@@ -286,3 +286,89 @@
 .map-popup:hover em {
     text-decoration: underline;
 }
+
+/*
+ * Article text. Used by the editor in the admin, the history screen and the
+ * public article page, so what an editor sees is what a reader gets. Blocks
+ * made by shortcodes carry .not-prose and keep their own styling.
+ */
+.article-body {
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.article-body :where(p, ul, ol, blockquote, pre, hr):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 0.9em;
+}
+.article-body :where(h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 1.5em 0.5em;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.article-body :where(h2):not(:where(.not-prose, .not-prose *)) {
+    font-size: 1.5em;
+}
+.article-body :where(h3):not(:where(.not-prose, .not-prose *)) {
+    font-size: 1.25em;
+}
+.article-body :where(h4):not(:where(.not-prose, .not-prose *)) {
+    font-size: 1.1em;
+}
+.article-body > :first-child {
+    margin-top: 0;
+}
+.article-body :where(ul, ol):not(:where(.not-prose, .not-prose *)) {
+    padding-left: 1.4em;
+}
+.article-body :where(ul):not(:where(.not-prose, .not-prose *)) {
+    list-style: disc;
+}
+.article-body :where(ol):not(:where(.not-prose, .not-prose *)) {
+    list-style: decimal;
+}
+.article-body :where(li):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 0.3em;
+}
+.article-body :where(li > p):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 0;
+}
+.article-body :where(a):not(:where(.not-prose, .not-prose *)) {
+    color: var(--color-sky-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.article-body :where(blockquote):not(:where(.not-prose, .not-prose *)) {
+    border-left: 4px solid var(--color-slate-300);
+    padding-left: 1em;
+    color: var(--color-slate-600);
+}
+.article-body :where(hr):not(:where(.not-prose, .not-prose *)) {
+    border-top: 1px solid var(--color-slate-200);
+}
+.article-body :where(code):not(:where(.not-prose, .not-prose *)) {
+    border-radius: 0.25rem;
+    background: var(--color-slate-100);
+    padding: 0.1em 0.3em;
+    font-size: 0.9em;
+}
+.article-body :where(pre):not(:where(.not-prose, .not-prose *)) {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    background: var(--color-slate-100);
+    padding: 0.75em 1em;
+}
+/* The hint shown in an empty editor. */
+.article-body p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--color-slate-400);
+    pointer-events: none;
+}
+/* On the public site: larger text and the site's own link colour. */
+.site-prose {
+    font-size: 1.125rem;
+}
+.site-prose :where(a):not(:where(.not-prose, .not-prose *)) {
+    color: var(--color-court);
+    font-weight: 700;
+}

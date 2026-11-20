@@ -34,13 +34,22 @@ class SettingController extends Controller
             'google_client_secret' => ['nullable', 'string', 'max:255'],
             // Google sends people back here, so it has to reach our callback route.
             'google_redirect' => ['nullable', 'url:http,https', 'max:255', 'ends_with:/auth/google/callback'],
+            'anthropic_api_key' => ['nullable', 'string', 'max:255', 'starts_with:sk-ant-'],
+            'remove_anthropic_api_key' => ['boolean'],
             // No SVG: it can carry scripts and is served from our own domain.
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'remove_logo' => ['boolean'],
         ]);
 
         $before = $this->current();
-        $values = collect($data)->except('logo', 'remove_logo')->all();
+        $values = collect($data)->except('logo', 'remove_logo', 'remove_anthropic_api_key')->all();
+
+        // Like the Google secret, the Claude key is never sent back to the browser: blank keeps it, the tick box removes it.
+        if ($request->boolean('remove_anthropic_api_key')) {
+            $values['anthropic_api_key'] = null;
+        } elseif (blank($values['anthropic_api_key'] ?? null)) {
+            unset($values['anthropic_api_key']);
+        }
         $values['app_url'] = rtrim($values['app_url'], '/');
         $values['google_redirect'] ??= route('auth.google.callback');
 

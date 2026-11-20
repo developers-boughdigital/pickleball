@@ -4,6 +4,7 @@ import { start as startRouter, visit } from './router';
 import installer from './installer';
 import venueMap from './map';
 import { permissionForm, permissionPicker, settingsForm, userForm } from './forms';
+import { articleEditor, draftWriter } from './articles';
 
 Alpine.store('nav', { loading: false });
 Alpine.magic('visit', () => visit);
@@ -13,6 +14,8 @@ Alpine.data('userForm', userForm);
 Alpine.data('permissionForm', permissionForm);
 Alpine.data('permissionPicker', permissionPicker);
 Alpine.data('settingsForm', settingsForm);
+Alpine.data('articleEditor', articleEditor);
+Alpine.data('draftWriter', draftWriter);
 
 // Ticked rows on the venue and club lists, for <x-admin.publish-bar>. "all" means
 // every row matching the filters, not just this page.

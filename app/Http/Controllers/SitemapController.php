@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Article;
 use App\Models\Club;
 use App\Models\Venue;
 use App\Support\Area;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class SitemapController extends Controller
 {
-    public const TYPES = ['pages', 'locations', 'venues', 'clubs'];
+    public const TYPES = ['pages', 'locations', 'venues', 'clubs', 'articles'];
 
     public function index(): Response
     {
@@ -32,6 +33,11 @@ class SitemapController extends Controller
     public function show(string $type): Response
     {
         abort_unless(in_array($type, self::TYPES), 404);
+
+        // Articles change on their own clock (one can go live on a schedule), so they aren't cached with the directory.
+        if ($type === 'articles') {
+            return $this->xml(view('sitemap.urls', ['urls' => $this->articles()])->render());
+        }
 
         $body = Cache::remember("sitemap:{$type}:{$this->fingerprint()}", now()->addDay(), fn () => view('sitemap.urls', [
             'urls' => match ($type) {
@@ -85,6 +91,14 @@ class SitemapController extends Controller
     {
         return $model::query()->visible()->orderBy('slug')->get(['slug', 'updated_at'])
             ->map(fn ($listing) => ['loc' => route($route, $listing), 'lastmod' => $listing->updated_at?->toW3cString()]);
+    }
+
+    private function articles(): Collection
+    {
+        $articles = Article::live()->latest('published_at')->get(['slug', 'updated_at']);
+
+        return $articles->map(fn (Article $article) => ['loc' => $article->url(), 'lastmod' => $article->updated_at?->toW3cString()])
+            ->when($articles->isNotEmpty(), fn (Collection $urls) => $urls->prepend(['loc' => route('learn'), 'lastmod' => $articles->max('updated_at')?->toW3cString()]));
     }
 
     /** The directory version (bumped on every save or delete), plus counts for changes made without model events. */
